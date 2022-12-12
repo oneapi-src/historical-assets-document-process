@@ -1,0 +1,9 @@
+name: ocr-datagen
+channels:
+  - defaults
+dependencies:
+  - pip=22.2.2
+  - python=3.9.13
+  - pip:  
+    - pillow==9.1.0
+    - trdg==1.8.0
