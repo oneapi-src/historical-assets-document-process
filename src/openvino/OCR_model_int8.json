@@ -1,0 +1,22 @@
+{
+    "model": {
+        "model_name": "OCR_model",
+        "model": "test_model.xml",
+        "weights": "test_model.bin"
+    },
+    "engine": {
+	            "type": "simplified",
+	        "data_source": "test_img.txt"
+	  },                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            
+    "compression": {
+        "algorithms": [
+            {
+                "name": "DefaultQuantization",
+                "params": {
+                    "preset": "mixed",
+                    "stat_subset_size": 300
+                }
+            }
+        ]
+    }
+}

@@ -1,0 +1,3 @@
+test/word_1.png
+test/word_2.png
+test/word_3.png
