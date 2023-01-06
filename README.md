@@ -1,12 +1,7 @@
 # **PyTorch Historical Assets Document Processing(OCR)**
 
 ## Introduction
-Utilities are accustomed to working with disconnected, antiquated systems and manual processes. Over the years, the amount of documentation has 
-increased substantially and accordingly paper base because many systems cannot accommodate the high volume of engineering data. 
-On average, maintenance, engineers, and operations teams spend hours every day, more than one workday each week, searching for accurate 
-and up-to-date engineering information, reading through paper-based engineering documents, and maintenance jobs. By providing data-driven 
-insights of the assets, AI-powered Intelligent document processing solutions can extend the useful lifetime by several years, minimizing 
-service disruptions and reducing operational costs.
+In the utilities industry, it is common to work processes which are manual, disconnected, or archaic in nature. There has been a significant increase in the amount of documentation over time, and as a result, many systems are unable to handle the large volume of engineering data that has been produced. Teams across the spectrum of maintenance, operations and engineering spend significant effort - searching for accurate engineering information ,read through paper-based engineering documents and maintenance job postings. By providing digitized data-driven insights of the assets, AI-powered Intelligent document processing solutions can minimize service disruptions , reduce operational costs, and extend the useful lifetime by several years (Accruent, [How Utilities Ensure Data Integrity with Document Version Control | Accruent](https://www.accruent.com/resources/blog-posts/how-utilities-ensure-data-integrity-document-version-control), 2023)
 
 OCR (Optical Character Recognition) is used to automatically scan document images, identify the regions of interest (ROIs) with text 
 and extract the different letters from the ​text detected.
