@@ -651,6 +651,13 @@ Intel technologies may require enabled hardware, software, or service activation
 
 ## Appendix
 
+### **Running on Windows**
+
+The reference kits commands are linux based, in order to run this on Windows, goto Start and open WSL and follow the same steps as running on a linux machine starting from git clone instructions. If WSL is not installed you can [install WSL](https://learn.microsoft.com/en-us/windows/wsl/install).
+
+> **Note** If WSL is installed and not opening, goto Start ---> Turn Windows feature on or off and make sure Windows Subsystem for Linux is checked. Restart the system after enabling it for the changes to reflect.
+****
+
 ### **Experiment setup**
 
 | Platform                          | Ubuntu 20.04
