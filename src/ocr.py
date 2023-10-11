@@ -1,4 +1,4 @@
-# Copyright (C) 2022 Intel Corporation
+# Copyright (C) 2023 Intel Corporation
 # SPDX-License-Identifier: BSD-3-Clause
 
 # pylint: disable=missing-module-docstring
@@ -38,7 +38,7 @@ def charRec(img, text_recs, model_path, quantized_model_path=None, intel_flag=Fa
         partImg = img[ymin:ymax,xmin:xmax]
         
         print("Processing roi")
-        Image.fromarray(partImg).save('./test_result/'+str(index)+".png")
+        Image.fromarray(partImg).save('./output/test_result/'+str(index)+".png")
         partImg = recognizer.preprocess_image(partImg)
         inf_time = 0
         if inc_opt:

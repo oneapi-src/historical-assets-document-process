@@ -1,4 +1,4 @@
-# Copyright (C) 2022 Intel Corporation
+# Copyright (C) 2023 Intel Corporation
 # SPDX-License-Identifier: BSD-3-Clause
 
 # pylint: disable=missing-module-docstring
@@ -45,7 +45,7 @@ def val(net, dataset, criterion, max_iter=100):
     for p in net.parameters():
         p.requires_grad = False
     # Validate the model
-    num_correct, num_all = val_model(config.val_infofile, net, False, log_file='compare-'+config.saved_model_prefix+'.log')
+    num_correct, num_all = val_model(config.val_infofile, net, False, log_file='compare-'+config.saved_model_name+'.log')
     accuracy = num_correct / num_all # Calculate the accuracy
     if config.use_log:
         with open(log_filename, 'a', encoding="utf-8") as f:
@@ -53,14 +53,13 @@ def val(net, dataset, criterion, max_iter=100):
     #global best_acc
     if accuracy > best_acc: # Check if the accuracy got is greater than the best accuracy
         best_acc = accuracy # Set best accuracy as the latest accuracy
-        torch.save(net.state_dict(), '{}/{}_{}_{}.pth'.format(config.saved_model_dir, config.saved_model_prefix,
-                                                              "best", int(best_acc * 1000))) #Save the model
+        torch.save(net.state_dict(), '{}/{}.pth'.format(config.saved_model_dir, config.saved_model_name)) #Save the model
 
 def trainBatch(net, criterion, optimizer):
     '''trainBatch function trains the crnn model and returns the cost
        input params:net,criterion,optimizer
        output param:cost '''
-    data = train_iter.next() # Get next batch of data using iterator
+    data = next(train_iter) # Get next batch of data using iterator
     cpu_images, cpu_texts = data # get the images and labels
     batch_size = cpu_images.size(0)
     print("batch size: "+str(batch_size))
@@ -83,18 +82,12 @@ if __name__ == "__main__":
     # Parameters
     parser = argparse.ArgumentParser()
 
-    parser.add_argument('-p',
-                        '--model_prefix',
+    parser.add_argument('-n',
+                        '--model_name',
                         type=str,
                         required=True,
                         default="",
-                        help='Prefix for saved model')
-    parser.add_argument('-i',
-                        '--intel',
-                        type=int,
-                        required=False,
-                        default=0,
-                        help='use 1 for enabling intel pytorch optimizations, default is 0')
+                        help='Name for saved model')
     parser.add_argument('-b',
                         '--batch_size',
                         type=int,
@@ -108,27 +101,28 @@ if __name__ == "__main__":
                         default="",
                         help='Pre-Trained Model Path')
     FLAGS = parser.parse_args()
-    intel_flag = FLAGS.intel
+    intel_flag = 1
     config.batchSize = FLAGS.batch_size
     config.pretrained_model = FLAGS.model_path
-    config.saved_model_prefix = FLAGS.model_prefix
+    config.saved_model_name = FLAGS.model_name
     torch.autograd.set_detect_anomaly(True)
     # Initialize the config values
     config.alphabet = config.alphabet_v2
     config.nclass = len(config.alphabet) + 1
+    config.saved_model_dir = 'output/crnn_models'
 
     os.environ["CUDA_VISIBLE_DEVICES"] = "0"
-    log_filename = os.path.join('logs/', 'loss_acc-'+config.saved_model_prefix + '.log')
-    if not os.path.exists('debug_files'):
-        os.mkdir('debug_files')
+    log_filename = os.path.join('output/logs/', 'loss_acc-'+config.saved_model_name + '.log')
+    if not os.path.exists('output/debug_files'):
+        os.mkdir('output/debug_files')
     if not os.path.exists(config.saved_model_dir):
         os.mkdir(config.saved_model_dir)
-    if config.use_log and not os.path.exists('logs'):
-        os.mkdir('logs')
+    if config.use_log and not os.path.exists('output/logs'):
+        os.mkdir('output/logs')
     if config.use_log and os.path.exists(log_filename):
         os.remove(log_filename)
     if config.experiment is None:
-        config.experiment = 'expr'
+        config.experiment = 'output/expr'
     if not os.path.exists(config.experiment):
         os.mkdir(config.experiment)
 
@@ -182,15 +176,13 @@ if __name__ == "__main__":
     else:
         optimizer = optim.RMSprop(crnn.parameters(), lr=config.lr)
 
-    if intel_flag: # Chek if intel flag is enabled
-        import intel_extension_for_pytorch as ipex  # pylint: disable=E0401
-        crnn = ipex.optimize(crnn, optimizer=optimizer) # Optimize the model using ipex
-        crnn_net = crnn[0]  # assign the crnn model to variable
-        optimizer_intel = crnn[1] # assign the optimizer to variable
-        print("Intel Pytorch Optimizations has been Enabled!")
-    else:
-        device = torch.device('cpu')
-    
+    # Enabling IPEX
+    import intel_extension_for_pytorch as ipex  # pylint: disable=E0401
+    crnn = ipex.optimize(crnn, optimizer=optimizer) # Optimize the model using ipex
+    crnn_net = crnn[0]  # assign the crnn model to variable
+    optimizer_intel = crnn[1] # assign the optimizer to variable
+    print("Intel Pytorch Optimizations has been Enabled!")
+
     print("Start of Training")
     train_time = time.time()
     for epoch in range(config.niter): # Start of for loop for epochs
@@ -200,18 +192,11 @@ if __name__ == "__main__":
         i = 0
         n_batch = len(train_loader)
         while i < len(train_loader):
-            if intel_flag: # Check if the intel flag is enabled
-                for p in crnn_net.parameters():
-                    p.requires_grad = True
-                crnn_net.train() # Train the model
-            else:
-                for p in crnn.parameters():
-                    p.requires_grad = True
-                crnn.train() # Mode training for stock
-            if intel_flag:
-                cost = trainBatch(crnn_net, criterion, optimizer=optimizer_intel) # Calculate the cost for intel
-            else:
-                cost = trainBatch(crnn, criterion, optimizer) # Calculate the cost for stock
+            # Enabling IPEX
+            for p in crnn_net.parameters():
+                p.requires_grad = True
+            crnn_net.train() # Train the model
+            cost = trainBatch(crnn_net, criterion, optimizer=optimizer_intel) # Calculate the cost for intel
             print('epoch: {} iter: {}/{} Train loss: {:.3f}'.format(epoch, i, n_batch, cost.item()))
             loss_avg.add(cost) # Calculate avg loss
             i += 1
@@ -221,10 +206,8 @@ if __name__ == "__main__":
             with open(log_filename, 'a', encoding="utf-8") as f:
                 f.write('{}\n'.format(datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')))
                 f.write('train_loss:{}\n'.format(loss_avg.val())) # writing losses to the log file
-        
+
     print("Train time is", time.time()-train_time)
     print("Model saving....")
-    if intel_flag:
-        val(crnn_net, test_dataset, criterion) # Validate the intel model and save the model
-    else:
-        val(crnn, test_dataset, criterion) # Validate the stock model and save the model
+    # Enabling IPEX
+    val(crnn_net, test_dataset, criterion) # Validate the intel model and save the model

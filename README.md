@@ -1,666 +1,1253 @@
-# **PyTorch Historical Assets Document Processing(OCR)**
+# PyTorch Historical Assets Document Processing(OCR)
 
 ## Introduction
-Utilities are accustomed to working with disconnected, antiquated systems and manual processes. Over the years, the amount of documentation has 
-increased substantially and accordingly paper base because many systems cannot accommodate the high volume of engineering data. 
-On average, maintenance, engineers, and operations teams spend hours every day, more than one workday each week, searching for accurate 
-and up-to-date engineering information, reading through paper-based engineering documents, and maintenance jobs. By providing data-driven 
-insights of the assets, AI-powered Intelligent document processing solutions can extend the useful lifetime by several years, minimizing 
-service disruptions and reducing operational costs.
 
-OCR (Optical Character Recognition) is used to automatically scan document images, identify the regions of interest (ROIs) with text 
-and extract the different letters from the ​text detected.
+Build an optimized Optical Character Recognition (OCR) solution to automate text detection and extraction from input document images using Intel® Extension for PyTorch\*, Intel® Neural Compressor and Intel® Distribution of OpenVINO<sup>TM</sup> Toolkit. Check out the [Developer Catalog](https://developer.intel.com/aireferenceimplementations) for information about different use cases.
 
-## **Table of Contents**
- - [Purpose](#purpose)
- - [Reference Solution](#proposed-solution)
- - [Reference Implementation](#reference-implementation)
- - [Intel® Implementation](#optimizing-the-E2E-solution-with-Intel®-oneAPI)
- - [Performance Observations](#performance-observations)
+## Solution Technical Overview
+Historically, business and organizations have faced the need to manage a huge amount of printed documents for multiple purposes, like obtain customer’s credit history, collect medical history of patients or access to legal documents for judicial cases. Manually process this enormous flow of paper-based documents represents a big challenge for any industry, since this manual procedure takes a lot of time to carry out, is prone to human error/bias, and requires a considerable physical space to store hundreds or thousands of paper files.
 
-## Purpose
-Intelligent document processing requires the processing of structured, semi-structured,  and unstructured content in documents. This requires image preprocessing, analysis, text region detection and text extraction using OCR and 
-entities recognition using NLP techniques. OCR (Optical Character Recognition) is used to automatically scan document images, identify the 
-regions with text and extract the different letters from the ​text detected. As an industry solution, the scanned input document image can be passed through any text detector (like Keras OCR)
-and then the extracted ROIs containing texts are sent to the Text Extraction module (CRNN architecture) from which 
-the text can be extracted and entities like Date, time, price, address, etc. can be detected as per the specific use case.
+The issue related to using storage facilities to preserve the documents can be address by a paperless and digitized solution that offers a way to easily store the printed documents in a suitable database. However, having a document scanned into an image of text is different than a machine-encoded text, which allows, for example, to efficiently use a text editor to modify some old file or retrieve a document by searching for a specific entity in a database, like client’s name. In this context, a large set of scanned files still requires domain specialization to manually extract useful information, which involves time, increases the cost of the process, and cannot eradicate the potential intentional or unintentional errors due to human intervention.
 
-## Reference Solution
-In this reference kit, we are building a deep learning model to perform text extraction from documents. We also focus on the following critical factors
-- Faster model development
-- Performance efficient model inference and deployment mechanism.
+Optical Character Recognition (OCR) systems emerge as an automated solution that generates machine-encoded text from input document images, making more efficient the processing of an increasingly number of digital files, in addition to minimizing human intervention [[1]](#hegghammer_2021)[[2]](#li_2022).
 
-In a typical deep learning based OCR solution, pretrained text detection model gives good accuracy on detecting text regions in the images but text recognition model is generally finetuned on the given dataset. Accuracy of text recognition model is dependent on the different properties of text like font, font-size, font color and handwritten or printed text etc. Hence it is advised to finetune the text recognition model on given dataset instead of using pretrained model to observe more accuracy in OCR pipeline. For this reference kit, in the end to end ocr pipeline, we are using pretrained text detection model from EasyOCR python library (installation steps can be found in this link https://pypi.org/project/easyocr), to detect the region of interest (ROIs) in the input image. These ROIs are cropped from the input image and passed to the trained text recognition (CRNN) model. We have focused only on training and inference of the text recognition component only.
+In an OCR pipeline, an input document image flows into a text detection component and next, it is processed by a text recognition component. In the text detection stage, the objective is to localize all text regions within the input document images, where each of these text zones are known as region of interest (ROI). Once the ROIs are detected, they are cropped from the input images and passed to the text recognition component, which is in charge of identifying the text contained in the ROIs and transcribe such text into machine-encoded text. This process is illustrated in the following diagram:
 
-For text recognition, we use CRNN, a classical convolutional recurrent neural network. CRNN model is the most widely used for text recognition. Tuning parameters have been introduced to the model in an optimization algorithm with different learning rates for checking how quickly the model is adapted to the problem in order to increase the model performance.
+![ocr-flow](assets/ocr_flow_diagram.png)
 
-Since GPUs are the natural choice for deep learning and AI processing to achieve a higher FPS rate but are very expensive and memory-consuming, the experiment applies model quantization using Intel's technology, which compresses the model using quantization techniques and uses the CPU for processing while maintaining the accuracy and speeding up the inference time of text extraction from documents.
+Nowadays, AI (Artificial Intelligence) methods in the form of cutting-edge deep learning algorithms are commonly incorporated into OCR solutions to increase their efficiency in the processing of scanned files and their accuracy in the text recognition task [[3]](#memon_2020). Deep learning detection models like YOLO variations and CRAFT are frequently used in the text detection module to localize the ROIs, whereas models like Convolutional Recurrent Neural Networks (CRNN) and Transformers are implemented as part of the text recognition stage [[2]](#li_2022)[[4]](#faustomorales_2019).
 
-Finally, we highlight the difference between using Intel® OneAPI packages against a stock version of the same packages. The time required for training the model, inference time and the accuracy of model are captured for multiple runs on the stock version as well on the Intel OneAPI version. The average of these runs is considered and the comparison is provided.
+Although deep learning-based OCR systems deliver a solution to effectively recognize and extract text images, in a production environment, where a massive number of digitized documents may query an OCR engine, it becomes essential to scale compute resources while maintaining the accuracy and speeding up the inference time of text extraction from document images.
 
-### **Key Implementation Details**
+This reference kit presents an OCR solution that features deep learning models for the text detection and recognition stages. For the text detection process, a Python\* library called EasyOCR is used. In the case of the text recognition stage, a CRNN architecture is implemented. Even though both detection and recognition components are contained in the proposed OCR pipeline, it is very important to note that this OCR solution mainly focuses on the training and inference stages of the text recognition module. For more details about the text recognition component, please refer to [this section](#solution-technical-details).
 
-The reference kit implementation is a reference solution to the OCR text extraction use case that includes 
+Besides offering an OCR system based on state-of-the-art deep learning techniques, the proposed OCR solution also considers the scale demands for a production environment by boosting the performance of the text recognition component using the following Intel® packages:
 
-  1. A reference E2E architecture to arrive at an AI solution with CRNN (Convolutional Recurrent Neural Network) for text extraction
-  from documents.
-  2. An Optimized reference E2E architecture enabled with Intel® Extension for PyTorch 1.12.100 and Intel® Neural Compressor 1.14
-  3. Intel® Distribution of OpenVINO™ 2022.1.0 Implementation
+* ***Intel® Extension for PyTorch****
 
-## **Reference Implementation**
+  With a few lines of code, you can use [Intel® Extension for PyTorch*](https://www.intel.com/content/www/us/en/developer/tools/oneapi/optimization-for-pytorch.html#gs.5vjhbw) to:
+    * Take advantage of the most up-to-date Intel software and hardware optimizations for PyTorch.
+    * Automatically mix different precision data types to reduce the model size and computational workload for inference.
+    * Add your own performance customizations using APIs.
 
-### **Use Case E2E flow**
+* ***Intel® Neural Compressor***
 
-![Use_case_flow](assets/e2e_workflow.png)
+  [Intel® Neural Compressor](https://www.intel.com/content/www/us/en/developer/tools/oneapi/neural-compressor.html#gs.5vjr1p) performs model compression to reduce the model size and increase the speed of deep learning inference for deployment on CPUs or GPUs. This open source Python* library automates popular model compression technologies, such as quantization, pruning, and knowledge distillation across multiple deep learning frameworks.
 
-### Expected Input-Output
+* ***Intel® Distribution of OpenVINO<sup>TM</sup>* Toolkit***
 
-**Input**                                 | **Output** |
-| :---: | :---: |
-| Image with text          | Extracted text|
+  The [OpenVINO<sup>TM</sup>](https://www.intel.com/content/www/us/en/download/753640/intel-distribution-of-openvino-toolkit.html) toolkit:
+     * Enables the use of models trained with popular frameworks, such as TensorFlow* and PyTorch*.
+     * Optimizes inference of deep learning models by applying model retraining or fine-tuning, like post-training quantization. 
+     * Supports heterogeneous execution across Intel hardware, using a common API for the Intel CPU, Intel® Integrated Graphics, Intel® Discrete Graphics, and other commonly used accelerators. 
 
+In particular, Intel® Neural Compressor functionalities are applied to compress the CRNN text extraction model via a post-training quantization procedure, which improves the performance of the model in inference time without compromising its accuracy and supports an efficient deployment of the quantized model in a wide range of Intel® CPUs and GPUs. In the same way, Intel® Distribution of OpenVINO<sup>TM</sup> Toolkit reduces model size by using quantization techniques, but also features an optimized deployment across Intel platforms, including edge devices and cloud environments. A detailed description of how this reference kit implements Intel® optimization packages can be found in this [section](#how-it-works).
 
-### ***Hyperparameter Analysis***
+With the aim to provide an accessible approach to conduct frequent re-training to analyze the performance of multiple CRNN models for the text extraction component, this OCR solution enables hyperparameter tuning. Combined with the use of cutting-edge deep learning models and Intel® optimization packages, hyperparameter tuning makes possible to leverage this reference kit as a useful resource for the machine learning practitioner looking to easily build and deploy a custom OCR system optimized to accurately extract text within document images.
 
-In realistic scenarios, an analyst will run the text extraction model multiple times on the same dataset, scanning across different hyperparameters.  
-To capture this, we measure the total amount of time it takes to generate results across different hyperparameters for a fixed algorithm, which we 
-define as hyperparameter analysis.  In practice, the results of each hyperparameter analysis provide the analyst with many different models that 
-they can take and further analyze.
+Furthermore, avoiding the manual retrieval of some specific information from a myriad of paper-based files and drastically reducing the human bias in the process, this reference kit presents an OCR system that the machine learning practitioner can leverage to perform text extraction for multiple applications, including [[5]](#thompson_2016)[[6]](#shatri_2020)[[7]](#oucheikh_2022)[[8]](#arvindrao_2023):
+  * Preservation of data contained in historical texts dating back centuries.
+  * Recognition of musical notation within scanned sheet music.
+  * Extracting text information from products to reduce shrinkage loss in grocery stores.
+  * Automate the processing of financial documents to combat fraud, increase productivity and improve customer service.  
 
-The below table provides details about the hyperparameters & values used for hyperparameter tuning in our benchmarking experiments:
-| **Algorithm**                     | **Hyperparameters**
-| :---                              | :---
-| CRNN Architecture                 | learning rate, epochs, batch size
+For more details, visit [Intel® Extension for PyTorch\*](https://www.intel.com/content/www/us/en/developer/tools/oneapi/optimization-for-pytorch.html#gs.5vjhbw), [Intel® Neural Compressor](https://www.intel.com/content/www/us/en/developer/tools/oneapi/neural-compressor.html#gs.5vjr1p), [Intel® Distribution of OpenVINO<sup>TM</sup> Toolkit](https://www.intel.com/content/www/us/en/download/753640/intel-distribution-of-openvino-toolkit.html), the [PyTorch\* Historical Assets Document Processing (OCR)]() GitHub repository, and the [EasyOCR](https://github.com/JaidedAI/EasyOCR) GitHub repository.
 
- We introduced different learning rates and batch sizes to the model architecture on the dataset, we increased the number of epochs to reach maximum accuracy on the training set. Hyperparameters considered for tuning are `Learning Rate, Epochs, Batch Size`.
+## Solution Technical Details
+In this section, the interested reader can find a more in deep explanation about the text recognition component from the proposed OCR solution. A description of the dataset used to perform training and inference is also presented.
 
-### ***Software Requirements***
-1. Python - 3.9.13
-2. PyTorch - 1.12.0
+### Text Recognition Component
+This reference kit is mainly focused on the text recognition component of the OCR workflow. The motivation behind this operation mode is that in a typical OCR system, the deep learning model that performs the text detection is a pretrained model that offers enough generalization capabilities to effectively localize the ROIs in the images dataset of the current task, so the process of finetuning the text detection model in the given dataset can be skipped. As a reference, the finetuning procedure consists of adjusting the weights already learned by the pretrained deep learning model, in order to make them more relevant for the problem at hand [[9]](#chollet_2017). Using the given dataset, this weight adjustment is achieved by training some or all the layers of the deep learning model.
 
-### ***Solution Setup Prerequisite***
-> Note that this reference kit implementation already provides the necessary scripts to setup the software requirements. 
-To utilize these environment scripts, first install Anaconda/Miniconda by following the instructions at the following link https://docs.conda.io/projects/conda/en/latest/user-guide/install/index.html or [Anaconda installation](https://docs.anaconda.com/anaconda/install/linux/)
+For this reference kit, the text detection task is carried out by EasyOCR, a Python\* library that uses the CRAFT (Character Region Awareness For Text Detection) framework, which incorporates a pretrained large scale convolutional neural network. 
 
-### ***Solution setup***
-Clone the repository to desired location on your computes using the command given below:
-```sh
-git clone https://github.com/oneapi-src/historical-assets-document-process.git
-cd historical-assets-document-process
-```
+On the other hand, the text recognition component does implement a deep learning model that is finetuned based on the ROIs detected in the given dataset, where this detection stage is firstly performed by EasyOCR. It is advisable to finetune the text recognition model on the given dataset because for a particular text recognition problem, the corresponding text images could exhibit certain font properties or they could come from determined sources, like a scanned ID card or a photo of an old manuscript, where the text could have very specific characteristics. In this scenario, finetuning the recognition model on the given dataset is the appropriate approach to achieve high accuracy on the text recognition task.
+
+For the recognition phase, this reference kit uses a CRNN model to identify text within the document images. A CRNN is a neural network architecture composed of a Convolutional Neural Network (CNN) followed by a certain type of Recurrent Neural Network (RNN), which for this project is a Long-Short Term Memory (LSTM). 
+
+A CNN model is useful to automatically extract sequential hierarchical features (known as feature maps) from each input image, whereas a LSTM, as any RNN, exhibits great proficiency in capturing contextual information within a sequence, in addition to be a type of RNN specialized in capturing long-term dependencies [[10]](#choi_2016)[[11]](#shi_2017). In fact, in the context of an OCR pipeline, the text recognition task is framed as an encoder-decoder problem that leverages a CNN-based encoder for image understanding and an RNN-base decoder for text generation [[2]](#li_2022).
+
+About the LSTM model used by the CRNN in this project, it works under a bidirectional approach. A traditional LSTM is directional and only uses contexts from the past, but for an image-based sequence problem, like the one address in this reference kit, a bidirectional LSTM is more appropriate as contexts containing previous and subsequent data are useful and complementary to each other [[11]](#shi_2017). 
+
+Regarding the workflow process of the CRNN, it receives a cropped ROI image from EasyOCR as an input, and the convolutional component proceeds to extract a sequence of feature maps, which are then mapped into a sequence of feature vectors. Next, the bidirectional LSTM makes a prediction for each feature vector. Finally, a post-processing step is carried out to convert the LSTM predictions into a label sequence. The diagram below provides an illustrative reference of this process.
+
+![ocr-flow](assets/crnn_flow_diagram.png)
+
+In terms of model architecture, the CRNN is composed by seven convolutional layers, each of them followed by a max pooling layer. As for the RNN, it is constituted by two bidirectional LSTM layers, each of them followed by a linear layer. The next table summarizes the structure of the CRNN model implemented in this reference kit. "in_maps" stands for "input feature maps", "out_maps" for "output feature maps", "k" for "kernel size", "s" for "stride", "p" for "padding", "in_features" is the size of each input instance and "out_features" is the size of each output instance.
+
+| **Layer** | Setup
+| :--- | :---
+| **Input** | Input ROI image<br>
+| **Convolutional** | in_maps:1, out_maps:64, k:3 X 3, s:(1,1), p:(1,1)
+| **Max pooling** | k:2 X 2, s:2
+| **Convolutional** | in_maps:64, out_maps:128, k:3 X 3, s:(1,1), p:(1,1)
+| **Max pooling** | k:2 X 2, s:2
+| **Convolutional** | in_maps:128, out_maps:256, k:3 X 3, s:(1,1), p:(1,1)
+| **BatchNormalization** | -
+| **Convolutional** | in_maps:256, out_maps:256, k:3 X 3, s:(1,1), p:(1,1)
+| **Max pooling** | k:2 X 2, s:(2,1), p:(0,1)
+| **Convolutional** | in_maps:256, out_maps:512, k:3 X 3, s:(1,1), p:(1,1)
+| **BatchNormalization** | -
+| **Convolutional** | in_maps:512, out_maps:512, k:3 X 3, s:(1,1), p:(1,1)
+| **Max pooling** | k:2 X 2, s:(2,1), p:(0,1)
+| **Convolutional** | in_maps:512, out_maps:512, k:3 X 3, s:(1,1)
+| **BatchNormalization** | -
+| **Bidirectional LSTM** | hidden state:256
+| **Linear** | in_features: 512, out_features:256
+| **Bidirectional LSTM** | hidden state:256
+| **Linear** | in_features: 512, out_features:5835
+
+Please see this [section](#download-the-crnn-model) to obtain more information on how to download the CRNN model used in this reference kit.
+
 ### Dataset
+This reference kit uses a synthetic image dataset of 3,356 labelled images created by the package [TextRecognitionDataGenerator](https://github.com/Belval/TextRecognitionDataGenerator). In this dataset, each image has certain text in it, so these images represent the ROIs that will feed the CRNN text recognition model. As a ground truth, TextRecognitionDataGenerator also generates a text file containing the image path and the corresponding text that appears in the image. Also, the dataset is automatically split into training and test sets. The next table describes the main attributes of the dataset.
+
 | **Use case** | OCR Text Extraction
 | :--- | :---
-| **Dataset** | Synthetic Random Words Dataset
-| **Size** | Total 3356 Labelled Images<br>
-| **Train Images** | 3256
+| **Size** | Total 3,356 Labelled Images<br>
+| **Train Images** | 3,256
 | **Test Images** | 100
 | **Input Size** | 32x280
 
-The dataset used for this demo is a synthetic dataset generated using TextRecognitionDataGenerator package (https://github.com/Belval/TextRecognitionDataGenerator). In this dataset, each image has certain texts in it. The ground truth text file is created with each image path and its respective words in the image. (Since we are using this dataset for Text extraction use case).
-The synthetic dataset can be generated using below steps:
-  ```
-  conda env create -f env/data_gen/ocr-datagen.yml
-  conda activate ocr-datagen
-  sh src/dataset_gen.sh
-  conda deactivate
-  ```
+To setup this dataset using TextRecognitionDataGenerator, follow the instructions listed [here](#download-the-datasets).
 
-> After running above steps, dataset will be generated in the data folder. Dataset contains train.txt, test.txt and images in data/dataset folder. train.txt and test.txt files will be used for training and inference respectively. These files contain paths to images and their respective labels.
+> *The data set used here was generated synthetically. Intel does not own the rights to this data set and does not confer any rights to it.*
 
->Note: It is assumed that the present working directory is the root directory of this code repository. You can verify the present working directory location using following command.
-```sh
-$pwd
-```
-```
-output: 
-<Absolute local path to cloned directory>/historical-assets-document-process
-```
-Follow the below conda installation commands to setup the Stock enviroment along with the necessary packages for this model training and prediction.
-```
-conda env create --file env/stock/stock-ocr.yml
-```
-This command utilizes the dependencies found in the `env/stock/stock.yml` file to create an environment as follows:
+## Validated Hardware Details
+There are workflow-specific hardware and software setup requirements depending on
+how the workflow is run. 
 
-**YAML file**                       | **Environment Name**         |  **Configuration** |
-| :---: | :---: | :---: |
-| `env/stock/stock-ocr.yml`             | `stock-ocr` | Python=3.9.13 with PyTorch=1.12.0
+| Recommended Hardware                                            | Precision
+| ----------------------------------------------------------------|-
+| CPU: Intel® 2th Gen Xeon® Platinum 8280 CPU @ 2.70GHz or higher | FP32, INT8
+| RAM: 187 GB                                                     |
+| Recommended Free Disk Space: 20 GB or more                      |
 
-Use the following command to activate the environment that was created:
-*Activate stock conda environment*
-```sh
-conda activate stock-ocr
-```
+Code was tested on Ubuntu\* 22.04 LTS.
 
-### **Reference Sources**
-*Case Study* *Github repo*: https://github.com/courao/ocr.pytorch.git<br>
+## How it Works
+The text recognition component enables the training and inference modalities. Furthermore, this reference kit provides the option to incorporate the trained CRNN text recognition model into an end-to-end OCR system to make predictions from a complete document image. All these procedures are optimized using Intel® specialized packages. The next diagram illustrates the workflow of these processes and how the Intel® optimization features are applied in each stage. 
 
-### ***Solution implementation***
+![ocr-flow](assets/e2e_flow_diagram.png)
 
-#### **Model building process**
-#### **Model Training**
-The Python script given below needs to be executed to start training using the active environment enabled by using 
-the above steps to setup the environment. 
+### Intel® Extension for PyTorch\*
+Training a CRNN model, and making inference with it, usually represent compute-intensive tasks. To address these requirements and to gain a performance boost on Intel® hardware, in this reference kit the training and inference stages of the CRNN model include the implementation of Intel® Extension for PyTorch\*.
 
-Pretrained text recognition (CRNN) model CRNN-1010.pth needs to be downloaded from https://drive.google.com/drive/folders/1hRr9v9ky4VGygToFjLD9Cd-9xan43qID. The below command can be used to download the model.
-```
-wget --no-check-certificate 'https://docs.google.com/uc?export=download&id=15TNHcvzNIjxCnoURkK1RGqe0m3uQAYxM' -O CRNN-1010.pth
-mkdir ./src/crnn_models
-mv CRNN-1010.pth ./src/crnn_models/CRNN-1010.pth
-```
+The training step through Intel® Extension for PyTorch\* has two operation modalities:
+   1)	Regular training. In this modality, the CRNN text recognition model is finetuned allowing the user to change the batch size. The resulting trained CRNN model is considered as the pretrained model that will be used to apply hyperparameter tuning in the next modality.
+   2)	Hyperparameter tuning. For this approach, the pretrained CRNN model from the previous modality is finetuned via the grid search paradigm, which performs an exhaustive search of optimal hyperparameters based on different values for batch size, learning rate and epochs. It is important to state that the values for batch size, learning rate and epochs are defined by default. The following table shows these values.
 
-```
-usage: python src/ocr_train.py [-p ][-i ][-b ][-m ]
-```
-Arguments:<br>
-```
---model_prefix, -p	  give prefix for model generated after training
---intel, -i               1 for enabling Intel PyTorch Optimizations, default is 0
---batchsize, -b           give the required batch size
---model_path, -m          give the path for the pretrained Model
-```
+        | **Hyperparameter** | Values
+        | :--- | :---
+        | **Batch size** | 80<br>
+        | **Number of epochs** | 5, 10
+        | **Learning rates** | 1e-3
 
-<b>Example</b>: 
-```
-python src/ocr_train.py -p "CRNN-1010_Stock_WOHP" -b 80 -m src/crnn_models/CRNN-1010.pth
-```
-In this example, as the environment is stock environment, -i parameter is not given and takes the default value of 0, batch size is 80, the model generated will be saved in ./src/crnn_models folder with the prefix CRNN-1010_Stock_WOHP.
+Regarding the inference phase, any of the trained CRNN models with Intel® Extension for PyTorch\* can be used to conduct inference tests. An additional advantage of this reference kit is that any of the trained CRNN models can be leveraged to make end-to-end predictions based on an input document image.
 
-#### **Hyperparameter Tuning**
-The Python script given below needs to be executed to start hyperparameter tuned training using the active environment enabled by using the above steps to 
-setup the environment. 
+Another important aspect of the CRNN models trained with Intel® Extension for PyTorch\*, is that these models are trained using a FP32 precision.
 
-The model generated using regular training from previous steps will be used as the pretrained model. Hyperparameters considered for tuning are 
-learning rate, epochs and the batch size. The model generated is saved to ./src/crnn_models folder.
+### Intel® Neural Compressor
+Once the CRNN models have been trained using Intel® Extension for PyTorch\*, their inference efficiency can be accelerated even more by the Intel® Neural Compressor library. This project enables the use of Intel® Neural Compressor to convert any of the trained FP32 CRNN models into an INT8 CRNN model by implementing post-training quantization, which apart from reducing model size, increase the inference speed up. 
 
-```
-usage: python src/ocr_train_hp.py [-p ][-i ][-b ][-m ]
+Just like any of the trained CRNN models with Intel® Extension for PyTorch\*, the CRNN model quantized with Intel® Neural Compressor can be used to carry out end-to-end predictions.
+
+### Intel® Distribution of OpenVINO™ Toolkit
+Similar to Intel® Neural Compressor, Intel® Distribution of OpenVINO™ Toolkit allows to reduce the model size with post-training quantization, which improves inference performance. By using Intel® Distribution of OpenVINO™ Toolkit post-training quantization, the FP32 CRNN model is converted to INT8. Moreover, Intel® Distribution of OpenVINO™ Toolkit optimizes the CRNN model for deployment in resource-constrained environments, like edge devices.
+
+In order to quantize the FP32 CRNN model using Intel® Distribution of OpenVINO™ Toolkit, it is necessary to first convert the original FP32 CRNN model into ONNX (Open Neural Network Exchange) model representation. After the model is converted to ONNX, it must be converted into an Intermediate Representation (IR) format, which is an internal Intel® Distribution of OpenVINO™ Toolkit model representation. Once the CRNN model is in IR format, Intel® Distribution of OpenVINO™ Toolkit directly quantized the IR model via the Post-training Optimization (POT) tool and transforms it into an INT8 model. This conversion stages are illustrated in the following diagram.
+
+![ocr-flow](assets/conversion_stages.png)
+
+Another benefit from using Intel® Distribution of OpenVINO™ Toolkit is that it enables the use of the benchmark Python\* tool, which is a feature that estimates the inference performance of the corresponding deep learning model on supported devices [[12]](#openvino). The estimated inference performance is calculated in terms of latency and throughput. For this use case, the benchmark Python\* tool is applied on the ONNX, IR and quantized INT8 models.
+
+As it can be seen, this reference kit offers the alternative to optimize the inference performance of the CRNN model not just with Intel® Neural Compressor, but also with Intel® Distribution of OpenVINO™ Toolkit.
+
+Please refer to the [Get Started](#get-started) section to see the instructions to implement the training, inference and end-to-end modalities using Intel® Extension for PyTorch\*, Intel® Neural Compressor and Intel® Distribution of OpenVINO™ Toolkit
+
+## Get Started
+Start by **defining an environment variable** that will store the workspace path, this can be an existing directory or one to be created in further steps. This ENVVAR will be used for all the commands executed using absolute paths.
+
+[//]: # (capture: baremetal)
+```bash
+export WORKSPACE=$PWD/historical-assets-document-process
 ```
 
-Arguments:<br>
-```
---model_prefix, -p        give prefix for model generated after training
---intel, -i               1 for enabling Intel PyTorch Optimizations, default is 0
---batchsize, -b           give the required batch size
---model_path, -m          give the path for the pretrained Model
+Also, it is necessary to define the following environment variables to correctly setup this reference kit
+
+[//]: # (capture: baremetal)
+```bash
+export DATA_DIR=$WORKSPACE/data
+export OUTPUT_DIR=$WORKSPACE/output 
 ```
 
-<b>Example</b>: 
-```sh
-python src/ocr_train_hp.py -p "CRNN-1010_Stock_WHP" -b 80 -m src/crnn_models/CRNN-1010_Stock_WOHP_best_870.pth
-```
-In this example, as the environment is stock environment, -i parameter is not given and takes the default value of 0, batch size is 80, the model gets tuned with hyperparameters and the generated model will be saved in ./src/crnn_models folder with the prefix CRNN-1010_Stock_WHP.
+**DATA_DIR:** This path will contain all the directories and files required to manage the dataset. 
 
-#### Model Inference or Predictions
-The Python script given below needs to be executed to perform inference using any of the models generated in the above steps. The paths of images, for 
-which the inference has to be performed need to be given in test.txt. The number of paths of images given in the file will be the batch size for 
-performing inference. In case of real time inference, only one image path needs to be provided.
+**OUTPUT_DIR:** This path will contain the multiple outputs generated by the workflow, e.g. FP32 CRNN model and INT8 CRNN model.
 
-```
-usage: python src/inference.py [-i ][-m ][-b]
+### Download the Workflow Repository
+Create the workspace directory for the workflow and clone the [PyTorch Historical Assets Document Processing(OCR)]() repository inside it.
+
+[//]: # (capture: baremetal)
+```bash
+mkdir -p $WORKSPACE && cd $WORKSPACE
 ```
 
-Arguments:<br>
-```
-  -i, --intel               Give 1 for enabling intel pytorch optimizations, default is 0
-  -m, --model_path          Absolute path to the pytorch model with extension ".pth"
-  -b, --batchsize           batchsize of images
+```bash
+git clone https://github.com/intel-innersource/frameworks.ai.platform.sample-apps.historical-assets-document-process.git $WORKSPACE
 ```
 
-<b>Example</b>:
-```sh
-python src/inference.py -m "./src/crnn_models/CRNN-1010_Stock_WOHP_best_870.pth" -b 100
-```
-In this example, "./src/crnn_models/CRNN-1010_Stock_WOHP_best_870.pth" is the trained model used for inference and default of 0 (for stock environment)
-will be considered for --i. The script does the inference for the set of images given in test.txt and outputs the Inference
-time for processing the images.
+### Set Up Conda
+Please follow the instructions below to download and install Miniconda.
 
-#### End to End Inference Pipeline
-The Python script given below needs to be executed to perform end to end inference on an input document image using any of the models generated in the above steps. This pipeline will extract all the text from the given input document image.
+1. Download the required Miniconda installer for Linux.
+   
+   ```bash
+   wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
+   ```
 
-```
-usage: python src/ocr_pipeline.py [-i ][-p ][-q][-m][-n]
+2. Install Miniconda.
+   
+   ```bash
+   bash Miniconda3-latest-Linux-x86_64.sh
+   ```
+
+3. Delete Miniconda installer.
+   
+   ```bash
+   rm Miniconda3-latest-Linux-x86_64.sh
+   ```
+
+Please visit [Conda Installation on Linux](https://docs.anaconda.com/free/anaconda/install/linux/) for more details. 
+
+### Set Up Environment
+Execute the next commands to install and setup libmamba as conda's default solver.
+
+```bash
+conda install -n base conda-libmamba-solver
+conda config --set solver libmamba
 ```
 
-Arguments:<br>
+| Packages | Version | 
+| -------- | ------- |
+| python | 3.9 |
+| intelpython3_core | 2023.2.0 |
+| intel-extension-for-pytorch | 2.0.100 |
+| neural-compressor| 2.3 |
+| openvino-dev| 2023.1.0 |
+
+The dependencies required to properly execute this workflow can be found in the yml file [$WORKSPACE/env/intel_env.yml](env/intel_env.yml).
+
+Proceed to create the conda environment.
+
+```bash
+conda env create -f $WORKSPACE/env/intel_env.yml
 ```
-  -i, --intel                   Give 1 for enabling intel pytorch optimizations, default is 0
+
+Environment setup is required only once. This step does not cleanup the existing environment with the same name hence we need to make sure there is no conda environment with the same name. During this setup, `historical_assets_intel` conda environment will be created with the dependencies listed in the YAML configuration.
+
+Activate the `historical_assets_intel` conda environment as follows:
+
+```bash
+conda activate historical_assets_intel
+```
+
+### Download the Datasets
+The next instructions allow to generate and setup the synthetic image dataset:
+
+1. Create the `dataset` directory
+
+[//]: # (capture: baremetal)
+```bash
+mkdir -p $DATA_DIR/dataset
+```
+
+2. Generate the synthetic image dataset:
+
+[//]: # (capture: baremetal)
+```bash
+sh $WORKSPACE/src/dataset_gen.sh
+```
+
+> *After running the above steps, the synthetic image dataset will be generated in `$DATA_DIR/data/dataset`. The files `train.txt` and `test.txt` will be created inside `$DATA_DIR/data`, and they will be used for training and inference, respectively. These files contain the path to each image and its associate label, which is the corresponding text that appears in the image. Finally, a directory located in `$DATA_DIR/data/pipeline_test_images` will be created to store some images useful to test the end-to-end performance of this reference kit.*
+
+In this [section](#dataset), a detailed description about the properties of the dataset is provided.
+
+### Download the CRNN Model
+The next instructions allow to download and manage the CRNN model for further training and inference using Intel® optimization packages.
+
+1. Download the text recognition CRNN model called `CRNN-1010.pth`.
+   
+   [//]: # (capture: baremetal)
+   ```bash
+   wget --no-check-certificate 'https://docs.google.com/uc?export=download&id=15TNHcvzNIjxCnoURkK1RGqe0m3uQAYxM' -O CRNN-1010.pth
+   ```
+
+2. Create the `output` directory, and inside it, the `crrn_models` folder, which will store the different CRNN models that the workflow will generate.
+  
+   [//]: # (capture: baremetal)
+   ```bash
+   mkdir -p $OUTPUT_DIR/crnn_models
+   ```
+
+3. Move the `CRNN-1010.pth` model to `$OUTPUT_DIR/crnn_models` folder.
+   
+   [//]: # (capture: baremetal)
+   ```bash
+   mv $WORKSPACE/CRNN-1010.pth $OUTPUT_DIR/crnn_models/CRNN-1010.pth
+   ```
+
+In this [section](#text-recognition-component), the interested reader can find technical information about the CRNN model.
+
+## Supported Runtime Environment
+The execution of this reference kit is compatible with the following environments:
+* Bare Metal
+
+---
+
+### Run Using Bare Metal
+Before executing the different stages of this use case, make sure your ``conda`` environment is already configured. If you don't already have ``conda`` installed, go to [Set Up Conda](#set-up-conda), or if the ``conda`` environment is not already activated, refer to [Set Up Environment](#set-up-environment).
+
+> *Note: It is assumed that the present working directory is the root directory of this code repository. Use the following command to go to the root directory.*
+
+```bash
+cd $WORKSPACE
+```
+
+#### Run Workflow
+The following subsections provide the commands to make an optimized execution of this OCR workflow based on Intel® Extension for PyTorch\*, Intel® Neural Compressor and Intel® Distribution of OpenVINO<sup>TM</sup> Toolkit. As an illustrative guideline to understand how the Intel® specialized packages are used to optimize the performance of the text recognition CRNN model, please check the [How it Works](#how-it-works) section.
+
+---
+
+#### Optimizations with Intel® Extension for PyTorch\*
+By using Intel® Extension for PyTorch\*, the performance of training, inference and end-to-end can be optimized.
+
+#### Regular training
+The Python\* script given below needs to be executed to start training the text recognition CRNN model previously downloaded in this [subsection](#download-the-crnn-model). About the training data, please check this [subsection](#download-the-datasets).
+
+```bash
+usage: python $WORKSPACE/src/ocr_train.py [-n] [-b] [-m]
+
+optional arguments:
+  --model_name, -n          Define the name for the model generated after training
+  --batch_size, -b          Give the required batch size
+  --model_path, -m          Give the path for the downloaded model 
+```
+
+As a reference to set the batch size, remember that the training data contains 3,256 images (see [here](#dataset)). The training data is located in `$DATA_DIR/dataset/train.txt`.
+
+Example:
+
+[//]: # (capture: baremetal)
+```bash
+python $WORKSPACE/src/ocr_train.py -n "CRNN-1010_Intel_WOHP" -b 80 -m $OUTPUT_DIR/crnn_models/CRNN-1010.pth
+```
+
+In this example, Intel® Extension for PyTorch\* is applied, the batch size is set to 80, and the generated model will be saved in `$OUTPUT_DIR/crnn_models folder` with the name "CRNN-1010_Intel_WOHP".
+
+#### Hyperparameter tuning
+The Python script given below needs to be executed to start hyperparameter tuned training. The model generated using the regular training approach will be regard as the pretrained model in which the fine tuning process will be applied. Hyperparameters considered for tuning are learning rate, epochs and batch size. The model generated is saved to `$OUTPUT_DIR/crnn_models` folder. To obtain more details about the hyperparameter tuning modality, refer to [this section](#how-it-works). 
+
+```bash
+usage: python $WORKSPACE/src/ocr_train_hp.py [-n] [-b] [-m]
+
+optional arguments:
+  --model_name, -n          Define the name for the model generated after hyperparameter tuning
+  --batch_size, -b          Give the required batch size
+  --model_path, -m          Give the path for the model pretrained using regular training
+```
+
+As a reference to set the batch size, remember that the training data contains 3,256 images (see [here](#dataset)). The training data is located in `$DATA_DIR/dataset/train.txt`.
+
+Example:
+
+[//]: # (capture: baremetal)
+```bash
+python $WORKSPACE/src/ocr_train_hp.py -n "CRNN-1010_Intel_WHP" -b 80 -m $OUTPUT_DIR/crnn_models/CRNN-1010_Intel_WOHP.pth
+```
+
+In this example, Intel® Extension for PyTorch\* is applied, the batch size is set to 80, and the generated finetuned model will be saved in `$OUTPUT_DIR/crnn_models` folder with the name "CRNN-1010_Intel_WHP". 
+
+#### Inference
+The Python script given below needs to be executed to perform inference based on any of the CRNN models trained with Intel® Extension for PyTorch\*. 
+
+```bash
+usage: python $WORKSPACE/src/inference.py [-m] [-b]
+
+optional arguments:
+  -m, --model_path          Absolute path to any of the CRNN models trained with Intel® Extension for PyTorch* 
+  -b, --batchsize           Batchsize of input images
+```
+
+As a reference to set the batch size, remember that the test data contains 100 images (see [here](#dataset)). The test data is located in `$DATA_DIR/dataset/test.txt`.
+
+Example:
+
+[//]: # (capture: baremetal)
+```bash
+python $WORKSPACE/src/inference.py -m $OUTPUT_DIR/crnn_models/CRNN-1010_Intel_WHP.pth -b 100
+```
+
+In this example, Intel® Extension for PyTorch\* is applied, the batch size is set to 80, and the trained CRNN model used to perform inference is the one fitted through hyperparameter tuning.
+
+#### End-to-end Inference Pipeline
+The Python script given below needs to be executed to perform end-to-end inference on an input document image based on any of the CRNN models trained with Intel® Extension for PyTorch\*. This pipeline will extract all the text from the given input document image. 
+
+```bash
+usage: python $WORKSPACE/src/ocr_pipeline.py [-p] [-q] [-m] [-n]
+
+optional arguments:
   -q, --inc                     Give 1 for enabling INC quantized model for inferencing, default is 0
-  -m, --crnn_model_path         Path to the CRNN FP32 model
-  -n, --quantized_model_path    Path to the CRNN Int8 model, it must be given if -q parameter is set to True, default is None
+  -m, --crnn_model_path         Path to the any of the CRNN FP32 models trained with Intel® Extension for PyTorch*
+  -n, --quantized_model_path    Path to the CRNN INT8 model, it must be given if -q parameter is set to True, default is None
   -p, --test_dataset_path       Path to the test image directory 
 ```
 
-<b>Example</b>:
-```sh
-python src/ocr_pipeline.py -p data/pipeline_test_images -m src/crnn_models/CRNN-1010.pth
-```
-The script does the inference on the set of input document images given in ./data/pipeline_test_images. Extracted text output
-will be saved in ./test_result folder.
+The script does the inference on the set of test input document images given in `$DATA_DIR/pipeline_test_images`. Extracted text output will be saved in `$OUTPUT_DIR/test_result folder`. The `--crnn_model_path` argument refers to the path of any of the CRNN models trained with Intel® Extension for PyTorch\*, which in this use case are stored in `$OUTPUT_DIR/crnn_models`. For now, ignore the `--quantized_model_path`, as it will be used in further stages.
 
-## **Optimizing the E2E solution with Intel® Extension for PyTorch**
-Although AI delivers a solution to address text extraction, a production scale implementation with millions 
-or billions of records demands for more compute power without leaving any performance on the table. Under this scenario, 
-text extraction models are essential for identifying and extracting text which will enable analysts to take
-appropriate decisions. For example, printed invoices can be used to identifying and extracting text, the results of 
-extraction can be later used for multiple purposes. In order to derive the most insightful and beneficial actions to take, 
-they will need to study and analyze the data generated through various feature sets and algorithms, thus requiring frequent 
-re-runs of the algorithms under many different parameter sets. To utilize all the hardware resources efficiently, Software 
-optimizations cannot be ignored.   
- 
-This reference kit solution extends to demonstrate the advantages of using the Intel® AI Analytics Toolkit on the task of 
-building a model for text extractions from documents.  The savings gained from using the Intel® Extension for PyTorch can 
-lead an analyst to more efficiently explore and understand data, leading to better and more precise targeted solutions.
+Example:
 
-#### Use Case E2E flow
-![image](assets/e2e_optimized.png)
-
-### **Optimized software components**
-Intel® Extension for PyTorch (version 1.12.100) framework has been optimized using oneAPI Deep Neural Network Library (oneDNN) primitives, a popular performance 
-library for deep learning applications. It provides accelerated implementations of numerous popular DL algorithms that optimize performance on 
-Intel® hardware with only requiring a few simple lines of modifications to existing code.
-
-Intel® Neural Compressor (version 1.14.0) is an open-source Python library. ML developers can incorporate this library for quantizing 
-the deep learning models. The quantized models give the advantage of compressing the models and boost in performance for inference time.​
-
-### ***Software Requirements***
-| **Package**                       | **Intel® Python**
-| :---                              | :---
-| Python                            | 3.9.13
-| Intel® Extension for PyTorch      | 1.12.100
-| Intel® Neural Compressor          | 1.14
-
-### ***Optimized Solution setup***
-Follow the below conda installation commands to setup the Intel enviroment along with the necessary packages for model training and prediction.
->Note: It is assumed that the present working directory is the root directory of this code repository
-
-```shell
-conda env create --file env/intel/intel-ocr.yml
-```
-This command utilizes the dependencies found in the `env/intel/intel.yml` file to create an environment as follows:
-
-**YAML file**                                 | **Environment Name** |  **Configuration** |
-| :---: | :---: | :---: |
-| `env/intel/intel-ocr.yml`             | `intel-ocr` | Python=3.9.13 with Intel PyTorch Extension 1.12.100
-
-For the workload implementation to arrive at first level solution we will be using the intel environment
-
-Use the following command to activate the environment that was created:
-```shell
-conda activate intel-ocr
-```
-The below changes have been done to the stock PyTorch training code base to utilize the Intel® Extension for PyTorch* performance.
-One can enable the intel flag to incorporate below Intel Pytorch optimizations.
-```python
-import intel_extension_for_pytorch as ipex
-
-model, optimizer = ipex.optimize(crnn, optimizer = optimizer)
+[//]: # (capture: baremetal)
+```bash
+python $WORKSPACE/src/ocr_pipeline.py -p $DATA_DIR/pipeline_test_images -m $OUTPUT_DIR/crnn_models/CRNN-1010_Intel_WHP.pth
 ```
 
-### ***Optimized Solution implementation***
+In this example, where Intel® Extension for PyTorch\* is applied, the trained CRNN model used to perform end-to-end inference is the one fitted through hyperparameter tuning.
 
-#### **Optimized Model building process**
-#### **Regular Model Training
-The Python script given below needs to be executed to start training using the active environment enabled by using 
-the above steps to setup the environment. 
+---
 
-```
-usage: python src/ocr_train.py [-p ][-i ][-b ][-m ]
-```
-Arguments:<br>
-```
---model_prefix, -p        give prefix for model generated after training
---intel, -i               1 for enabling Intel PyTorch Optimizations, default is 0
---batchsize, -B           give the required batch size
---model_path, -m          give the path for the pretrained Model 
-```
+#### Optimizations with Intel® Neural Compressor
+By using Intel® Neural Compressor, any of the trained FP32 CRNN models with Intel® Extension for PyTorch\* can be converted into an INT8 model, which optimizes the inference and end-to-end performance.
 
-<b>Example</b>: 
-```sh
-python src/ocr_train.py -p "CRNN-1010_Intel_WOHP" -i 1 -b 80 -m src/crnn_models/CRNN-1010.pth
-```
-In this example, as the environment is with Intel Optimizations, -i is set to 1, batch size is 80, the model generated will be saved in ./src/crnn_models folder with the prefix CRNN-1010_Intel_WOHP.
+#### Quantization
+The below script is used to convert any of the FP32 CRNN models trained with Intel® Extension for PyTorch\* into an INT8 quantized model.
 
-#### **Hyperparameter Tuning**
-The Python script given below needs to be executed to start hyperparameter tuned training using the active environment enabled by using the above steps to 
-setup the environment. 
+```bash
+usage: python $WORKSPACE/src/neural_compressor_conversion.py [-m] [-o]
 
-The model generated using regular training from previous steps will be used as the pretrained model. Hyperparameters considered for tuning are 
-learning rate, epochs and batch size. The model generated is saved to ./src/crnn_models folder.
-
-```
-usage: python src/ocr_train_hp.py [-p ][-i ][-b ][-m ]
+optional arguments:
+  -m, --modelpath                 Path to any of the FP32 CRNN models trained with Intel® Extension for PyTorch*
+  -o, --outputpath                Output path where the quantized INT8 model will be stored
 ```
 
-Arguments:<br>
-```
---model_prefix, -p        give prefix for model generated after training
---intel, -i               1 for enabling Intel PyTorch Optimizations, default is 0
---batchsize, -b           give the required batch size
---model_path, -m          give the path for the pretrained Model 
---model_path, -m          give the path for the pretrained Model 
+Example:
+
+[//]: # (capture: baremetal)
+```bash
+python $WORKSPACE/src/neural_compressor_conversion.py -m $OUTPUT_DIR/crnn_models/CRNN-1010_Intel_WHP.pth -o $OUTPUT_DIR/crnn_models
 ```
 
-<b>Example</b>: 
-```sh
-python src/ocr_train_hp.py -p "CRNN-1010_Intel_WHP" -i 1 -b 80 -m src/crnn_models/CRNN-1010_Intel_WOHP_best_870.pth
-```
-In this example, as the environment is intel, -i parameter is set to 1, batch size is 80, the model gets tuned with hyperparameters and the generated model will be saved in ./src/crnn_models folder with the prefix CRNN-1010_Intel_WHP.
+Here the `$OUTPUT_DIR/crnn_models/CRNN-1010_Intel_WHP.pth` gives the path of the FP32 CRNN model trained with Intel® Extension for PyTorch\* following the hyperparameter tuning approach. The model after conversion, that is the quantized model, will be stored in the `$OUTPUT_DIR/crnn_models` with the name `best_model.pt`.
 
-#### **Optimized Model Inference or Predictions**
-The Python script given below needs to be executed to perform inference using any of the models generated in the above steps. The paths of images, for 
-which the inference has to be performed need to be given in test.txt. The number of paths of images given in the file will be the batch size for 
-performing inference. In case of real time inference, only one image path needs to be provided.
+#### Inference with Quantized Model 
+The Python script given below needs to be executed to perform inference based on the quantized CRNN model. 
 
-```
-usage: python src/inference.py [-i ][-m ][-b]
-```
+```bash
+usage: python $WORKSPACE/src/inc_inference.py [-m] [-q] [-b]
 
-Arguments:<br>
-```
-  -i, --intel               Give 1 for enabling intel pytorch optimizations, default is 0
-  -m, --model_path          Absolute path to the pytorch model with extension ".pth"
-  -b, --batchsize           batchsize of input images
+optional arguments:
+  -m, --fp32modelpath             Path to any of the FP32 CRNN models trained with Intel® Extension for PyTorch*
+  -q, --int8modelpath             Path where the quantized CRNN model is stored. This model is the quantized INT8 version of the FP32 model stored in -m
+  -b, --batchsize                 Batchsize of input images
 ```
 
-<b>Example</b>:
-```sh
-python src/inference.py -i 1 -m ./src/crnn_models/CRNN-1010_Intel_WOHP_best_870.pth -b 100
-```
-In this example, -i is set to 1 because the environment is Intel Optimized environment. The "./src/crnn_models/CRNN-1010_Intel_WOHP_best_870.pth" is the trained model used 
-for inference. The script does the inference for the set of images given in test.txt and logs the inference
-time as output.
+As a reference to set the batch size, remember that the test data contains 100 images (see [here](#dataset)). The test data is located in `$DATA_DIR/dataset/test.txt`. Please consider that the INT8 CRNN model stored in `-q` must correspond to the quantized version of the FP32 CRNN model stored in `-m`.
 
-#### End to End Inference Pipeline
-The Python script given below needs to be executed to perform end to end inference on an input document image using any of the models generated in the above steps. This pipeline will extract all the text from the given input document image.
-```
-usage: python src/ocr_pipeline.py [-i ][-p ][-q][-m][-n]
+Example
+
+[//]: # (capture: baremetal)
+```bash
+python $WORKSPACE/src/inc_inference.py -m $OUTPUT_DIR/crnn_models/CRNN-1010_Intel_WHP.pth  -q $OUTPUT_DIR/crnn_models/best_model.pt -b 100
 ```
 
-Arguments:<br>
+In this example, the FP32 CRNN model corresponds to the one fitted through hyperparameter tuning.
+
+#### Comparison Between FP32 and INT8 Models
+
+Execute the below script to compare the performance of a CRNN FP32 model regarding its corresponding INT8 quantized model.
+
+```bash
+usage: python $WORKSPACE/src/performance_analysis.py [-m] [-q]
+
+optional arguments:
+  -m, --fp32modelpath             Path to any of the FP32 CRNN models trained with Intel® Extension for PyTorch\*
+  -q, --int8modelpath             Path where the quantized CRNN model is stored. This model is the quantized INT8 version of the FP32 model stored in -m
 ```
-  -i, --intel                   Give 1 for enabling intel pytorch optimizations, default is 0
+
+Example
+
+[//]: # (capture: baremetal)
+```bash
+python $WORKSPACE/src/performance_analysis.py -m $OUTPUT_DIR/crnn_models/CRNN-1010_Intel_WHP.pth  -q $OUTPUT_DIR/crnn_models/best_model.pt
+```
+
+In this example, the FP32 CRNN model is the one fitted through hyperparameter tuning. Please consider that the INT8 CRNN model stored in `-q` must correspond to the quantized version of the FP32 CRNN model stored in `-m`.
+
+#### End-to-end Inference Pipeline
+The Python script given below needs to be executed to perform end-to-end inference on an input document image based on the quantized INT8 model using Intel® Neural Compressor. This pipeline will extract all the text from the given input document image. 
+
+```bash
+usage: python $WORKSPACE/src/ocr_pipeline.py [-p] [-q] [-m] [-n]
+
+optional arguments:
   -q, --inc                     Give 1 for enabling INC quantized model for inferencing, default is 0
-  -m, --crnn_model_path         Path to the CRNN FP32 model
-  -n, --quantized_model_path    Path to the CRNN Int8 model, it must be given if -q parameter is set to True, default is None
+  -m, --crnn_model_path         Path to the any of the CRNN FP32 models trained with Intel® Extension for PyTorch*
+  -n, --quantized_model_path    Path to the CRNN INT8 model, it must be given if -q parameter is set to True, default is None. This model is the quantized INT8 version of the FP32 model stored in -m
   -p, --test_dataset_path       Path to the test image directory 
 ```
 
-<b>Example</b>:
-```sh
-python src/ocr_pipeline.py -i 1 -p data/pipeline_test_images -m src/crnn_models/CRNN-1010.pth
-```
-The script does the inference on the set of input document images given in ./data/pipeline_test_images. Extracted text output
-will be saved in ./test_result folder. Intel flag has been set to true to enable the Intel optimizations while inference.
+The script does the inference on the set of test input document images given in `$DATA_DIR/pipeline_test_images`. Extracted text output will be saved in `$OUTPUT_DIR/test_result folder`. The `--crnn_model_path` argument refers to the path of any of the FP32 CRNN models trained with Intel® Extension for PyTorch\*, which by default are saved in `$OUTPUT_DIR/crnn_models`. 
 
-#### **Quantization with Intel Neural Compressor**
-Intel® Neural Compressor is used to quantize the FP32 Model to the INT8 Model.
-Intel® Neural Compressor supports many optimization methods. Here, we have used post training quantization with `Default quanitization mode` method to 
-quantize the FP32 model.
+Example:
 
-The below script is used to convert the FP32 model to INT8 quantized model. Run the below script after activating the Intel environment.
-```
-usage: python src/neural_compressor_conversion.py [-m MODELPATH] [-o OUTPUTPATH]
+[//]: # (capture: baremetal)
+```bash
+python $WORKSPACE/src/ocr_pipeline.py -q 1 -p $DATA_DIR/pipeline_test_images -m $OUTPUT_DIR/crnn_models/CRNN-1010_Intel_WHP.pth -n $OUTPUT_DIR/crnn_models/best_model.pt 
 ```
 
-Arguments:
-```
-  -m, --modelpath                 path of the FP32 model
-  -o, --outputpath           output path for int8 model
+In this example, the FP32 CRNN model is the one fitted through hyperparameter tuning. Please consider that the INT8 CRNN model stored in `-n` must correspond to the quantized version of the FP32 CRNN model stored in `-m`.
 
-```
+---
 
-<b>Example</b>
-```sh
-python src/neural_compressor_conversion.py -m ./src/crnn_models/CRNN-1010_Intel_WHP_best_820.pth -o src/crnn_models
-```
-Here the "./src/crnn_models/CRNN-1010_Intel_WHP_best_820.pth" gives the path of the FP32 trained model. The model after conversion, that is 
-the quantized model will be stored in the src/crnn_models folder.
+#### Optimizations with Intel® Distribution of OpenVINO<sup>TM</sup> Toolkit
+Another option to quantize any of the trained FP32 CRNN models with Intel® Extension for PyTorch\* is by using Intel® Distribution of OpenVINO<sup>TM</sup> Toolkit, which is specialized in optimizing the inference performance in constrained environments, like edge devices. However, in order to quantize the FP32 CRNN model using Intel® Distribution of OpenVINO™ Toolkit, it is required to first convert the FP32 CRNN model into an ONXX model representation, then, the ONXX model is converted into an Intermediate Representation (IR) format, and finally, the IR model can be quantized. For further details, check this [subsection](#intel®-distribution-of-openvino™-toolkit).
 
-#### **Inference with Quantized Model**
-The Python script given below needs to be executed to perform inference using the model generated in the above step. The paths of images, for 
-which the inference has to be performed need to be given in test.txt. The number of paths of images given in the file will be the batch size for 
-performing inference. In case of real time inference, only one image path needs to be provided.
+#### Model Conversion to ONNX Format
+Below script is used to convert FP32 model to ONNX model representation. The converted ONNX model file will be saved in `$WORKSPACE/src/openvino`.
 
-```
-usage: python src/inc_inference.py [-m FP32MODELPATH] [-q INT8MODELPATH] [-b batchsize]
-```
-Arguments:
-```
-  -m, --fp32modelpath             FP32 model 
-  -q, --int8modelpath             quantized model
-  -b, --batchsize                 batchsize of input images
+```bash
+python $WORKSPACE/src/onnx_convert.py [-m] [-output]
+
+optional arguments:
+  -m, --fp32modelpath             Path to any of the FP32 CRNN models trained with Intel® Extension for PyTorch\*
+  -output, --onnxmodelpath        Give path in which you want the ONNX model to be stored
 ```
 
-<b>Example</b>
-```sh
-python src/inc_inference.py -m ./src/crnn_models/CRNN-1010_Intel_WHP_best_820.pth  -q ./src/crnn_models/best_model.pt -b 100
-```
-To analyse the performance of the FP32 and INT8 models we can use the below script
+Example:
 
-```
-usage: python src/performance_analysis.py [-m FP32MODELPATH] [-q INT8MODELPATH]
-```
-By running the above script we can get the time taken for both the FP32 model and INT8 model which can be used for comparison.
-
-Arguments:
-```
-  -m, --fp32modelpath             FP32 model 
-  -q, --int8modelpath             quantized model
-```
-<b>Example</b>
-```sh
-python src/performance_analysis.py -m ./src/crnn_models/CRNN-1010_Intel_WHP_best_820.pth  -q ./src/crnn_models/best_model.pt
+[//]: # (capture: baremetal)
+```bash
+python $WORKSPACE/src/onnx_convert.py -m $OUTPUT_DIR/crnn_models/CRNN-1010_Intel_WHP.pth -output $WORKSPACE/src/openvino
 ```
 
-#### End to End Inference Pipeline
-The Python script given below needs to be executed to perform end to end inference on an input document image using the quantized model generated in the above steps. This pipeline will extract all the text from the given input document image.
-```
-usage: python src/ocr_pipeline.py [-i ][-p ][-q][-m][-n]
+In this example, the FP32 CRNN model converted to ONNX format is the one fitted through hyperparameter tuning. 
+
+#### Model Conversion to OpenVINO<sup>TM</sup> IR Format
+Below script is used to convert ONNX model into an IR model representation, which is an internal Intel® Distribution of OpenVINO™ Toolkit model representation. 
+
+```bash
+mo --input_model <ONNX model> --output_dir <Output directory path to save the IR model>
+
+optional arguments:
+  --input_model             Path where the ONNX is stored.
+  --output_dir              Path of the folder to save the OpenVINO IR model format
 ```
 
-Arguments:<br>
-```
-  -i, --intel                   Give 1 for enabling intel pytorch optimizations, default is 0
-  -q, --inc                     Give 1 for enabling INC quantized model for inferencing, default is 0
-  -m, --crnn_model_path         Path to the CRNN FP32 model
-  -n, --quantized_model_path    Path to the CRNN Int8 model, it must be given if -q parameter is set to True, default is None
-  -p, --test_dataset_path       Path to the test image directory 
+The above command will generate `<model-name>.bin` and `<model-name>.xml`. These files will be used in later steps to finally quantize the model and perform predictions. Default precision is FP32.
+
+Example:
+
+[//]: # (capture: baremetal)
+```bash
+mo --input_model $WORKSPACE/src/openvino/test_model.onnx --output_dir $WORKSPACE/src/openvino
 ```
 
-<b>Example</b>:
-```sh
-python src/ocr_pipeline.py -i 1 -q 1 -p data/pipeline_test_images -m src/crnn_models/CRNN-1010.pth -n src/crnn_models/best_model.pt 
-```
-In this example, "./src/crnn_models/CRNN-1010.pth" is the trained FP32 model and src/crnn_models/best_model.pt is the quantized int8 model used for inference. The script does the inference on the set of input document images given in ./data/pipeline_test_images. Extracted text output
-will be saved in ./test_result folder. INC flag has been set to true to enable inference using quantized int8 model.
+#### Model Inference Performance with OpenVINO<sup>TM</sup> Benchmark Python\* Tool
+By using the benchmark Python\* tool from Intel® Distribution of OpenVINO™ Toolkit, it is possible to estimate the inference performance of the ONNX, IR and quantized INT8 models.
 
-### **Using Intel® Distribution of OpenVINO™**
-When it comes to the deployment of this model on Edge devices, with less computing and memory resources, we further need to explore 
-options for quantizing and compressing the model which brings out the same level of accuracy and efficient utilization of underlying 
-computing resources. Intel® Distribution of OpenVINO™ Toolkit facilitates the optimization of a deep learning model from a framework 
-and deployment using an inference engine on such computing platforms based on Intel hardware accelerators. This section covers the steps 
-to use this toolkit for model quantization and measure its performance.
+#### Inference Performance of ONNX Model
+Below command is used to run the benchmark tool for the ONNX model.
 
-### ***Intel® Distribution of OpenVINO™ Environment Setup***
-Follow the below conda installation commands to setup the OpenVINO enviroment along with the necessary packages.
->Note: It is assumed that the present working directory is the root directory of this code repository
+```bash
+benchmark_app -m <Path of ONNX model>
 
-```shell
-conda env create --file env/openvino_pot/openvino-ocr.yml
-```
-This command utilizes the dependencies found in the `env/openvino_pot/openvino.yml` file to create an environment as follows:
-
-**YAML file**                                 | **Environment Name** |  **Configuration** |
-| :---: | :---: | :---: |
-| `env/openvino_pot/openvino-ocr.yml`             | `openvino-ocr` | 2022.1.0
-
-Use the following command to activate the environment that was created:
-```shell
-conda activate openvino-ocr
+optional arguments: 
+  -m,--modelpath   Path of model in ONNX format
 ```
 
-#### Model conversion to OpenVINO Intermediate Representation (IR) conversion
-Below script is used to convert FP32 model to ONNX model representation. The converted onnx model file will be saved in 
-./src/openvino.
+Example:
 
-```
-  python src/onnx_convert.py -m [FP32ModelPath] -output [output dir path to save the onnx model]
-```
-
-Arguments:
-```
-  -m, --fp32modelpath             FP32 model Path
-  -output, --onnxmodelpath        give path in which you want the ONNX model to be stored
+[//]: # (capture: baremetal)
+```bash
+benchmark_app -m $WORKSPACE/src/openvino/test_model.onnx
 ```
 
-<b>Example</b>
-```sh
-python src/onnx_convert.py -m src/crnn_models/CRNN-1010_Intel_WHP_best_900.pth -output src/openvino
-```
-The converted model will be saved to the src/openvino folder in .onnx format.
+#### Inference Performance of OpenVINO<sup>TM</sup> IR Model
+Below command is used to run the benchmark tool for the IR model.
 
-Below command is used to convert the onnx model to OpenVINO IR model format.
-```sh
-mo --input_model <onnx model> --output_dir <output dir path to save the IR model>
-```
-Arguments
-```
---input_model     onnx model
---output_dir      path of the folder to save the OpenVINO IR model format
-```
-The above command will generate `<model-name>.bin` and `<model-name>.xml` as output which can be used for OpenVINO inference. Default precision is FP32.\
-\
-<b>Example</b>
-```sh
-mo --input_model ./src/openvino/test_model.onnx --output_dir ./src/openvino
+```bash
+benchmark_app -m <Path of the IR model in xml format>
+
+optional arguments: 
+  -m,--modelpath   Path of model in IR model in xml format
 ```
 
-#### Model Performance with OpenVINO Post-Training Optimization Tool
-Post-training Optimization Tool (POT) is designed to accelerate the inference of deep learning models by applying special methods without model 
-retraining or fine-tuning. One such method is post-training quantization.
+Example:
 
-Below command is used to run the benchmark tool for the ONNX model generated. 
-
-```sh
-benchmark_app -m <path of onnx model>
+[//]: # (capture: baremetal)
+```bash
+benchmark_app -m $WORKSPACE/src/openvino/test_model.xml
 ```
 
-Argument
-```
--m,--modelpath   path of model in onnx format
-```
-<b>Example</b>
-```sh
-benchmark_app -m ./src/openvino/test_model.onnx
-```
+#### Model Conversion Using OpenVINO<sup>TM</sup> Post-training Optimization Tool (POT)
+A configuration file is needed to setup the various parameters and apply quantization via the Post-training Optimization Tool (POT), which converts the IR FP32 model into an INT8 model. The same configuration file has already been provided in the repo at following path:
 
-Below command is used to run the benchmark tool for the OpenVINO IR model. 
-```sh
-benchmark_app -m <Path of the OpenVino IR model in xml format>
 ```
-Argument
-```
--m,--modelpath   Path of model in OpenVino IR model in xml format
-```
-<b>Example</b>
-```sh
-benchmark_app -m ./src/openvino/test_model.xml
-```
-#### Model Conversion Using OpenVino Quantization
-A configuration file is needed to configure the various parameters for post training optimization tool (pot). The same configuration file has already been provided in the repo at follwing path: 
-```
-src/openvino/OCR_model_int8.json
+$WORKSPACE/src/openvino/OCR_model_int8.json
 ```
 
 User can update the following parameters in the json file using any editor tool available on the computer.
+
 ```
 "model_name"    : Name of the output model
-"model"         : path to fp32 model (.xml) file
-"weights"       : path to fp32 model weights (.bin) file
+"model"         : Path to IR FP32 model (.xml) file
+"weights"       : Path to IR FP32 model weights (.bin) file
 ```
-Use the below command to quantize the model. When this command execution completes successfully, it generates a 
-folder with the name `results` where the quantized model files will be generated.
-```sh
-cd src/openvino
-pot -c <path of the configuration file> -d 
+
+Use the below command to quantize the model and convert it into an INT8 model. When this command execution completes successfully, it generates a folder with the name `results` where the quantized model files will be generated.
+
+```bash
+cd $WORKSPACE/src/openvino
+pot -c <Path of the configuration file> -d 
+
+optional arguments: 
+  -c,--configfile  Path of the configuration file
 ```
-Argument
-```
--c,--configfile  path of the POT configuration file
-```
-<b>Example</b>
-```sh
-cd src/openvino
+
+Example:
+
+[//]: # (capture: baremetal)
+```bash
+cd $WORKSPACE/src/openvino
 pot -c OCR_model_int8.json -d
 ```
-After running the above command, we can verify that "OCR_model.bin", "OCR_model.xml", "OCR_model.mapping" files (quantized model) got generated on "src/openvino/results/optimized" path.
-##### Model Performance Using Quantized (INT8) Model
-Use the below command to run the benchmark tool for the Quantized OpenVINO IR model.
 
-```sh
+After running the above command, we can verify that files "OCR_model.bin", "OCR_model.xml and "OCR_model.mapping" (quantized model) got generated on `$WORKSPACE/src/openvino/results/optimized` path.
+
+#### Inference Performance of Quantized INT8 Model
+Below command is used to run the benchmark tool for the quantized INT8 model.
+
+```bash
 benchmark_app -m <quantized POT model in xml format>
+
+optional arguments: 
+  -m,--quantizedmodelpath   Quantized POT model in xml format
 ```
 
-Argument
-```
--m,--quantizedmodelpath   Quantized POT model in xml format
-```
-<b>Example</b>
-```sh
+Example:
+
+[//]: # (capture: baremetal)
+```bash
 benchmark_app -m ./results/optimized/OCR_model.xml
 ```
-## **Performance Observations**
-This section covers the training time and inference time comparison between Stock PyTorch version and Intel® Extension for PyTorch for this 
-model training and prediction. The results are captured for regular training and hyperparamter tuned training models which includes 
-training time and inference time. The results are used to calculate the performance gain achieved by using Intel® One API packages over 
-stock version of similar packages.
 
-![image](assets/TrainingTimeBenchmarks.png)
-<br>**Takeaway**<br>Intel® Extension for PyTorch offers training time speed-up of around 1.29x during regular model training and 
-around 1.81x during hyperparameter tuned training compared to stock PyTorch version.
+#### Clean Up Bare Metal
+The next commands are useful to remove the previously generated conda environment, as well as the dataset and the multiple models and files created during the workflow execution. Before proceeding with the cleanup process, it is recommended to backing up the data you want to preserve.
 
-![image](assets/InferenceTimeBenchmarks.png)
-<br>**Takeaway**<br>Intel® Extension for PyTorch* 1.12.100 offers real time inference speed-up of around 1.83x gain and batch inference speed-up up to 1.21x gain when compared to stock PyTorch 1.12.0.
+```bash
+conda deactivate #Run this line if the historical_assets_intel environment is still active
+conda env remove -n historical_assets_intel
+rm $OUTPUT_DIR $DATA_DIR $WORKSPACE -rf
+```
 
-Intel® Neural Compressor 1.14.0 quantization offers real time inference speed-up of around 2.48x gain and batch inference speed-up up to 2.32x gain when compared to stock PyTorch 1.12.0.
+---
 
-![image](assets/ThroughputOpenVinoQuantizationBenchmark.png)
+### Expected Output
+A successful execution of the different stages of this workflow should produce outputs similar to the following:
 
-- Full precision ONNX Model (FP32)
-    - Throughput: **272.93 FPS**
-- Full precision IR Model (FP32)
-    - Throughput: **275.13 FPS**
-- Quantized IR Model (INT8 with DefaultQuantization)
-    - Throughput: **635.25 FPS**
+#### Regular Training Output with Intel® Extension for PyTorch\*
 
-<br>**Takeaway**<br>Intel® Distribution of OpenVINO™ full precision IR (FP32) model offers FPS speed-up of around 1x and quantized IR (INT8) model with default quantization
-offers FPS speed-up of 2.32x compared to full precision ONNX model.
+```
+loading pretrained model from output/crnn_models/CRNN-1010.pth
+Intel Pytorch Optimizations has been Enabled!
+Start of Training
+epoch 0....
+batch size: 80
+epoch: 0 iter: 0/41 Train loss: 39.135
+batch size: 80
+epoch: 0 iter: 1/41 Train loss: 13.852
+batch size: 80
+epoch: 0 iter: 2/41 Train loss: 8.824
+batch size: 80
+epoch: 0 iter: 3/41 Train loss: 9.496
+batch size: 80
+epoch: 0 iter: 4/41 Train loss: 8.571
+batch size: 80
+epoch: 0 iter: 5/41 Train loss: 5.992
+```
+...
+```
+epoch: 24 iter: 35/41 Train loss: 0.053
+batch size: 80
+epoch: 24 iter: 36/41 Train loss: 0.060
+batch size: 80
+epoch: 24 iter: 37/41 Train loss: 0.127
+batch size: 80
+epoch: 24 iter: 38/41 Train loss: 0.304
+batch size: 80
+epoch: 24 iter: 39/41 Train loss: 0.039
+batch size: 56
+epoch: 24 iter: 40/41 Train loss: 0.278
+Train loss: 0.130145
+Train time is 1022.9462730884552
+Model saving....
+Start val
+```
 
-#### **Conclusion**
-To build an OCR text extraction solution using CRNN (Convolutional Recurrent Neural Network) transfer learning approach, 
-at scale, Data Scientists will need to train models for substantial datasets and run inference more frequently. The ability 
-to accelerate training will allow them to train more frequently and achieve better accuracy. Besides training, faster speed 
-in inference will allow them to run prediction in real-time scenarios as well as more frequently. A Data Scientist will also 
-look at text extraction from documents and categorize them so that it can be better understood and analyzed. This task requires 
-a lot of training and retraining, making the job tedious. The ability to get it to faster speed will accelerate the ML pipeline. 
-This reference kit implementation provides performance-optimized guide around named OCR text extraction use cases that can be 
-easily scaled across similar use cases.
+#### Hyperparameter Tuning Output with Intel® Extension for PyTorch\*
 
-###Notices & Disclaimers
-Performance varies by use, configuration, and other factors. Learn more on the [Performance Index site](https://edc.intel.com/content/www/us/en/products/performance/benchmarks/overview/). 
-Performance results are based on testing as of dates shown in configurations and may not reflect all publicly available updates.  See backup for configuration details.  No product or component can be absolutely secure. 
-Your costs and results may vary. 
-Intel technologies may require enabled hardware, software, or service activation.<br>
-© Intel Corporation.  Intel, the Intel logo, and other Intel marks are trademarks of Intel Corporation or its subsidiaries.  Other names and brands may be claimed as the property of others.
+```
+loading pretrained model from output/crnn_models/CRNN-1010_Intel_WOHP_best_840.pth
+CRNN(
+  (conv1): Conv2d(1, 64, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+  (relu1): ReLU(inplace=True)
+  (pool1): MaxPool2d(kernel_size=2, stride=2, padding=0, dilation=1, ceil_mode=False)
+  (conv2): Conv2d(64, 128, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+  (relu2): ReLU(inplace=True)
+  (pool2): MaxPool2d(kernel_size=2, stride=2, padding=0, dilation=1, ceil_mode=False)
+  (conv3_1): Conv2d(128, 256, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+  (bn3): BatchNorm2d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+  (relu3_1): ReLU(inplace=True)
+  (conv3_2): Conv2d(256, 256, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+  (relu3_2): ReLU(inplace=True)
+  (pool3): MaxPool2d(kernel_size=(2, 2), stride=(2, 1), padding=(0, 1), dilation=1, ceil_mode=False)
+  (conv4_1): Conv2d(256, 512, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+  (bn4): BatchNorm2d(512, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+  (relu4_1): ReLU(inplace=True)
+  (conv4_2): Conv2d(512, 512, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+  (relu4_2): ReLU(inplace=True)
+  (pool4): MaxPool2d(kernel_size=(2, 2), stride=(2, 1), padding=(0, 1), dilation=1, ceil_mode=False)
+  (conv5): Conv2d(512, 512, kernel_size=(2, 2), stride=(1, 1))
+  (bn5): BatchNorm2d(512, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+  (relu5): ReLU(inplace=True)
+  (rnn): Sequential(
+    (0): BidirectionalLSTM(
+      (rnn): LSTM(512, 256, bidirectional=True)
+      (embedding): Linear(in_features=512, out_features=256, bias=True)
+    )
+    (1): BidirectionalLSTM(
+      (rnn): LSTM(256, 256, bidirectional=True)
+      (embedding): Linear(in_features=512, out_features=5835, bias=True)
+    )
+  )
+)
+Intel Pytorch Optimizations has been Enabled!
+Start of hp tuning
+epoch 0....
+batch size: 80
+epoch: 0 iter: 0/41 Train loss: 0.016
+batch size: 80
+epoch: 0 iter: 1/41 Train loss: 0.055
+```
+...
+```
+epoch: 9 iter: 35/41 Train loss: 0.070
+batch size: 80
+epoch: 9 iter: 36/41 Train loss: 0.049
+batch size: 80
+epoch: 9 iter: 37/41 Train loss: 0.006
+batch size: 80
+epoch: 9 iter: 38/41 Train loss: 0.050
+batch size: 80
+epoch: 9 iter: 39/41 Train loss: 0.047
+batch size: 56
+epoch: 9 iter: 40/41 Train loss: 0.133
+Train loss: 0.197468
+Inferencing.................
+Start val
+ocr_acc: 0.880000
+Hyperparameter tuning time is 699.8766577243805
+accuracy list
+[0.87, 0.88]
+parameters list
+[(80, 0.001, 5), (80, 0.001, 10)]
+the best parameters are
+(80, 0.001, 10)
+```
+
+#### Inference Output with Intel® Extension for PyTorch\*
+
+```
+Intel Pytorch Optimizations has been Enabled!
+Average Batch Inference time taken for in seconds --->  0.3702504992485046
+Accuracy is ---> 0.88
+```
+
+#### End-to-end Inference Pipeline with Intel® Extension for PyTorch\*
+
+```
+Using CPU. Note: This module is much faster with a GPU.
+['data/pipeline_test_images/0_avoidable self-prescribed old-age Carlylese prioress.jpg', 'data/pipeline_test_images/0_mapau delitescency WW2 thunderer flukes.jpg']
+/root/miniconda3/envs/historical_assets_intel/lib/python3.9/site-packages/intel_extension_for_pytorch/frontend.py:474: UserWarning: Conv BatchNorm folding failed during the optimize process.
+  warnings.warn("Conv BatchNorm folding failed during the optimize process.")
+/root/miniconda3/envs/historical_assets_intel/lib/python3.9/site-packages/intel_extension_for_pytorch/frontend.py:479: UserWarning: Linear BatchNorm folding failed during the optimize process.
+  warnings.warn("Linear BatchNorm folding failed during the optimize process.")
+Intel Pytorch Optimizations has been Enabled!
+Processing roi
+Average Batch Inference time taken for in seconds --->  0.005330908298492432
+output from current roi: avoidable
+Processing roi
+Average Batch Inference time taken for in seconds --->  0.006089353561401367
+output from current roi: self-prescribed
+Processing roi
+Average Batch Inference time taken for in seconds --->  0.004653286933898926
+output from current roi: old-age
+Processing roi
+Average Batch Inference time taken for in seconds --->  0.0050509095191955565
+output from current roi: Carlylese
+Processing roi
+Average Batch Inference time taken for in seconds --->  0.004717493057250976
+output from current roi: prioress
+Extracetd text:
+ avoidable self-prescribed old-age Carlylese prioress
+Prediction time for image:  0.025841951370239258
+Intel Pytorch Optimizations has been Enabled!
+Processing roi
+Average Batch Inference time taken for in seconds --->  0.0045200705528259276
+output from current roi: mapall
+Processing roi
+Average Batch Inference time taken for in seconds --->  0.005540859699249267
+output from current roi: delitescency
+Processing roi
+Average Batch Inference time taken for in seconds --->  0.004426908493041992
+output from current roi: WWz
+Processing roi
+Average Batch Inference time taken for in seconds --->  0.005026328563690186
+output from current roi: thunderer
+Processing roi
+Average Batch Inference time taken for in seconds --->  0.004381299018859863
+output from current roi: flukes
+Extracetd text:
+ mapall delitescency WWz thunderer flukes
+Prediction time for image:  0.023895466327667234
+Total pipeline prediction time for all the images:  0.04973741769790649
+```
+
+#### Quantization Output with Intel® Neural Compressor
+
+```
+2023-09-28 22:27:51 [INFO] Because both eval_dataloader_cfg and user-defined eval_func are None, automatically setting 'tuning.exit_policy.performance_only = True'.
+2023-09-28 22:27:51 [INFO] The cfg.tuning.exit_policy.performance_only is: True
+2023-09-28 22:27:51 [INFO] Attention Blocks: 0
+2023-09-28 22:27:51 [INFO] FFN Blocks: 0
+2023-09-28 22:27:51 [INFO] Pass query framework capability elapsed time: 159.7 ms
+2023-09-28 22:27:51 [INFO] Adaptor has 2 recipes.
+2023-09-28 22:27:51 [INFO] 0 recipes specified by user.
+2023-09-28 22:27:51 [INFO] 0 recipes require future tuning.
+2023-09-28 22:27:51 [INFO] Neither evaluation function nor metric is defined. Generate a quantized model with default quantization configuration.
+2023-09-28 22:27:51 [INFO] Force setting 'tuning.exit_policy.performance_only = True'.
+2023-09-28 22:27:51 [INFO] Fx trace of the entire model failed, We will conduct auto quantization
+2023-09-28 22:27:54 [INFO] |******Mixed Precision Statistics******|
+2023-09-28 22:27:54 [INFO] +----------------------+-------+-------+
+2023-09-28 22:27:54 [INFO] |       Op Type        | Total |  INT8 |
+2023-09-28 22:27:54 [INFO] +----------------------+-------+-------+
+2023-09-28 22:27:54 [INFO] | quantize_per_tensor  |   12  |   12  |
+2023-09-28 22:27:54 [INFO] |        Conv2d        |   7   |   7   |
+2023-09-28 22:27:54 [INFO] |      dequantize      |   12  |   12  |
+2023-09-28 22:27:54 [INFO] |     BatchNorm2d      |   3   |   3   |
+2023-09-28 22:27:54 [INFO] |        Linear        |   2   |   2   |
+2023-09-28 22:27:54 [INFO] +----------------------+-------+-------+
+2023-09-28 22:27:54 [INFO] Pass quantize model elapsed time: 3654.04 ms
+2023-09-28 22:27:54 [INFO] Save tuning history to /historical-assets-main-test/nc_workspace/2023-09-28_22-27-50/./history.snapshot.
+2023-09-28 22:27:54 [INFO] Specified timeout or max trials is reached! Found a quantized model which meet accuracy goal. Exit.
+2023-09-28 22:27:54 [INFO] Save deploy yaml to /historical-assets-main-test/nc_workspace/2023-09-28_22-27-50/deploy.yaml
+2023-09-28 22:27:55 [INFO] Save config file and weights of quantized model to /historical-assets-main-test/output/crnn_models.
+```
+
+#### Inference Output with Intel® Neural Compressor
+
+```
+/root/miniconda3/envs/historical_assets_intel/lib/python3.9/site-packages/torch/_utils.py:335: UserWarning: TypedStorage is deprecated. It will be removed in the future and UntypedStorage will be the only storage class. This should only matter to you if you are using storages directly.  To access UntypedStorage directly, use tensor.untyped_storage() instead of tensor.storage()
+  device=storage.device,
+/root/miniconda3/envs/historical_assets_intel/lib/python3.9/site-packages/torch/ao/quantization/observer.py:1209: UserWarning: must run observer before calling calculate_qparams.
+     Returning default scale and zero point
+  warnings.warn(
+/root/miniconda3/envs/historical_assets_intel/lib/python3.9/site-packages/intel_extension_for_pytorch/frontend.py:474: UserWarning: Conv BatchNorm folding failed during the optimize process.
+  warnings.warn("Conv BatchNorm folding failed during the optimize process.")
+/root/miniconda3/envs/historical_assets_intel/lib/python3.9/site-packages/intel_extension_for_pytorch/frontend.py:479: UserWarning: Linear BatchNorm folding failed during the optimize process.
+  warnings.warn("Linear BatchNorm folding failed during the optimize process.")
+Intel Pytorch Optimizations has been Enabled!
+Running Inference with INC Quantized Int8 Model
+Average Batch Inference time taken in seconds --->  0.31022746562957765
+Running Inference with FP32 Model
+Average Batch Inference time taken in seconds --->  0.2863597750663757
+```
+
+#### Output of the Comparison Between FP32 and INT8 Models Using Intel® Neural Compressor
+
+```
+/root/miniconda3/envs/historical_assets_intel/lib/python3.9/site-packages/torch/_utils.py:335: UserWarning: TypedStorage is deprecated. It will be removed in the future and UntypedStorage will be the only storage class. This should only matter to you if you are using storages directly.  To access UntypedStorage directly, use tensor.untyped_storage() instead of tensor.storage()
+  device=storage.device,
+/root/miniconda3/envs/historical_assets_intel/lib/python3.9/site-packages/torch/ao/quantization/observer.py:1209: UserWarning: must run observer before calling calculate_qparams.
+     Returning default scale and zero point
+  warnings.warn(
+/root/miniconda3/envs/historical_assets_intel/lib/python3.9/site-packages/intel_extension_for_pytorch/frontend.py:474: UserWarning: Conv BatchNorm folding failed during the optimize process.
+  warnings.warn("Conv BatchNorm folding failed during the optimize process.")
+/root/miniconda3/envs/historical_assets_intel/lib/python3.9/site-packages/intel_extension_for_pytorch/frontend.py:479: UserWarning: Linear BatchNorm folding failed during the optimize process.
+  warnings.warn("Linear BatchNorm folding failed during the optimize process.")
+**************************************************
+Evaluating the FP32 Model
+**************************************************
+predicted:  cimbalom
+targeted: cimbalom
+predicted:  IKT
+targeted: ITT
+predicted:  roughrider
+targeted: roughrider
+predicted:  gramaphone
+targeted: gramaphone
+predicted:  nonsolicitously
+targeted: nonsolicitously
+predicted:  in-goal
+targeted: in-goal
+predicted:  slaking
+targeted: slaking
+predicted:  spani
+targeted: spaid
+predicted:  cardioplegia
+targeted: cardioplegia
+predicted:  rejuvenating
+```
+...
+```
+targeted: H-steel
+predicted:  postexilian
+targeted: postexilian
+predicted:  entasia
+targeted: entasia
+predicted:  all-understanding
+targeted: all-understanding
+predicted:  trademarks
+targeted: trademarks
+predicted:  Darbyism
+targeted: Darbyism
+predicted:  gluing
+targeted: gluing
+predicted:  Scincus
+targeted: Scincus
+predicted:  haeremai
+targeted: haeremai
+predicted:  sassywood
+targeted: sassywood
+predicted:  sabtaiaagyalanr
+targeted: subtriangular
+predicted:  uncemented
+targeted: uncemented
+predicted:  Thbuan
+targeted: thuan
+predicted:  ideals
+targeted: ideals
+predicted:  celadons
+targeted: celadons
+predicted:  anosphresia
+targeted: anosphresia
+predicted:  ralliance
+targeted: ralliance
+Accuracy of INT8 model : 0.88
+```
+
+#### Output of End-to-end Inference Pipeline with Intel® Neural Compressor
+
+```
+Using CPU. Note: This module is much faster with a GPU.
+['data/pipeline_test_images/0_avoidable self-prescribed old-age Carlylese prioress.jpg', 'data/pipeline_test_images/0_mapau delitescency WW2 thunderer flukes.jpg']
+/root/miniconda3/envs/historical_assets_intel/lib/python3.9/site-packages/intel_extension_for_pytorch/frontend.py:474: UserWarning: Conv BatchNorm folding failed during the optimize process.
+  warnings.warn("Conv BatchNorm folding failed during the optimize process.")
+/root/miniconda3/envs/historical_assets_intel/lib/python3.9/site-packages/intel_extension_for_pytorch/frontend.py:479: UserWarning: Linear BatchNorm folding failed during the optimize process.
+  warnings.warn("Linear BatchNorm folding failed during the optimize process.")
+Intel Pytorch Optimizations has been Enabled!
+Processing roi
+Average Batch Inference time taken for in seconds --->  0.006333315372467041
+output from current roi: avoidable
+Processing roi
+Average Batch Inference time taken for in seconds --->  0.007137012481689453
+output from current roi: self-prescribed
+Processing roi
+Average Batch Inference time taken for in seconds --->  0.005516910552978515
+output from current roi: old-age
+Processing roi
+Average Batch Inference time taken for in seconds --->  0.005982935428619385
+output from current roi: Carlylese
+Processing roi
+Average Batch Inference time taken for in seconds --->  0.005561506748199463
+output from current roi: prioress
+Extracetd text:
+ avoidable self-prescribed old-age Carlylese prioress
+Prediction time for image:  0.030531680583953856
+Intel Pytorch Optimizations has been Enabled!
+Processing roi
+Average Batch Inference time taken for in seconds --->  0.005342221260070801
+output from current roi: mapall
+Processing roi
+Average Batch Inference time taken for in seconds --->  0.006565296649932861
+output from current roi: delitescency
+Processing roi
+Average Batch Inference time taken for in seconds --->  0.005243873596191407
+output from current roi: WWz
+Processing roi
+Average Batch Inference time taken for in seconds --->  0.005867362022399902
+output from current roi: thunderer
+Processing roi
+Average Batch Inference time taken for in seconds --->  0.0051540017127990724
+output from current roi: flukes
+Extracetd text:
+ mapall delitescency WWz thunderer flukes
+Prediction time for image:  0.02817275524139404
+Total pipeline prediction time for all the images:  0.0587044358253479
+```
+
+#### Output From Model Conversion to ONNX Format Using Intel® Distribution of OpenVINO<sup>TM</sup>
+
+```
+/historical-assets-main-test/src/crnn.py:87: TracerWarning: Converting a tensor to a Python boolean might cause the trace to be incorrect. We can't record the data flow of Python values, so this value will be treated as a constant in the future. This means that the trace might not generalize to other inputs!
+  assert h == 1, "the height of conv must be 1"  # nosec
+/root/miniconda3/envs/historical_assets_intel/lib/python3.9/site-packages/torch/onnx/symbolic_opset9.py:4476: UserWarning: Exporting a model to ONNX with a batch_size other than 1, with a variable length with LSTM can cause an error when running the ONNX model with a different batch size. Make sure to save the model with a batch size of 1, or define the initial states (h0/c0) as inputs of the model.
+  warnings.warn(
+============= Diagnostic Run torch.onnx.export version 2.0.1+cu117 =============
+verbose: False, log level: Level.ERROR
+======================= 0 NONE 0 NOTE 0 WARNING 0 ERROR ========================
+```
+
+#### Output From Model Conversion to OpenVINO<sup>TM</sup> IR Format
+
+```
+[ INFO ] Generated IR will be compressed to FP16. If you get lower accuracy, please consider disabling compression explicitly by adding argument --compress_to_fp16=False.
+Find more information about compression to FP16 at https://docs.openvino.ai/2023.0/openvino_docs_MO_DG_FP16_Compression.html
+[ INFO ] The model was converted to IR v11, the latest model format that corresponds to the source DL framework input/output format. While IR v11 is backwards compatible with OpenVINO Inference Engine API v1.0, please use API v2.0 (as of 2022.1) to take advantage of the latest improvements in IR v11.
+Find more information about API v2.0 and IR v11 at https://docs.openvino.ai/2023.0/openvino_2_0_transition_guide.html
+[ SUCCESS ] Generated IR version 11 model.
+[ SUCCESS ] XML file: /historical-assets-main-test/src/openvino/test_model.xml
+[ SUCCESS ] BIN file: /historical-assets-main-test/src/openvino/test_model.bin
+```
+
+#### Output From Inference Performance of ONNX Model
+
+```
+[Step 1/11] Parsing and validating input arguments
+[ INFO ] Parsing input parameters
+[Step 2/11] Loading OpenVINO Runtime
+[ INFO ] OpenVINO:
+[ INFO ] Build ................................. 2023.1.0-12185-9e6b00e51cd-releases/2023/1
+[ INFO ]
+[ INFO ] Device info:
+[ INFO ] CPU
+[ INFO ] Build ................................. 2023.1.0-12185-9e6b00e51cd-releases/2023/1
+[ INFO ]
+[ INFO ]
+[Step 3/11] Setting device configuration
+[ WARNING ] Performance hint was not explicitly specified in command line. Device(CPU) performance hint will be set to PerformanceMode.THROUGHPUT.
+```
+...
+```
+[Step 9/11] Creating infer requests and preparing input tensors
+[ WARNING ] No input files were given for input 'input.1'!. This input will be filled with random values!
+[ INFO ] Fill input 'input.1' with random values
+[Step 10/11] Measuring performance (Start inference asynchronously, 56 inference requests, limits: 60000 ms duration)
+[ INFO ] Benchmarking in inference only mode (inputs filling are not included in measurement loop).
+[ INFO ] First inference took 48.80 ms
+[Step 11/11] Dumping statistics report
+[ INFO ] Execution Devices:['CPU']
+[ INFO ] Count:            154168 iterations
+[ INFO ] Duration:         60024.32 ms
+[ INFO ] Latency:
+[ INFO ]    Median:        21.10 ms
+[ INFO ]    Average:       21.20 ms
+[ INFO ]    Min:           15.20 ms
+[ INFO ]    Max:           62.28 ms
+[ INFO ] Throughput:   2568.43 FPS
+```
+
+#### Output From Inference Performance of OpenVINO<sup>TM</sup> IR Model
+
+```
+-[Step 1/11] Parsing and validating input arguments
+[ INFO ] Parsing input parameters
+[Step 2/11] Loading OpenVINO Runtime
+[ INFO ] OpenVINO:
+[ INFO ] Build ................................. 2023.1.0-12185-9e6b00e51cd-releases/2023/1
+[ INFO ]
+[ INFO ] Device info:
+[ INFO ] CPU
+[ INFO ] Build ................................. 2023.1.0-12185-9e6b00e51cd-releases/2023/1
+[ INFO ]
+[ INFO ]
+[Step 3/11] Setting device configuration
+[ WARNING ] Performance hint was not explicitly specified in command line. Device(CPU) performance hint will be set to PerformanceMode.THROUGHPUT.
+```
+...
+```
+[Step 9/11] Creating infer requests and preparing input tensors
+[ WARNING ] No input files were given for input 'input.1'!. This input will be filled with random values!
+[ INFO ] Fill input 'input.1' with random values
+[Step 10/11] Measuring performance (Start inference asynchronously, 56 inference requests, limits: 60000 ms duration)
+[ INFO ] Benchmarking in inference only mode (inputs filling are not included in measurement loop).
+[ INFO ] First inference took 47.88 ms
+[Step 11/11] Dumping statistics report
+[ INFO ] Execution Devices:['CPU']
+[ INFO ] Count:            157080 iterations
+[ INFO ] Duration:         60023.72 ms
+[ INFO ] Latency:
+[ INFO ]    Median:        20.77 ms
+[ INFO ]    Average:       20.80 ms
+[ INFO ]    Min:           17.80 ms
+[ INFO ]    Max:           65.43 ms
+[ INFO ] Throughput:   2616.97 FPS
+```
+
+#### Output From Model Conversion Using OpenVINO<sup>TM</sup> Post-training Optimization Tool (POT)
+
+```
+[ WARNING ] /root/miniconda3/envs/historical_assets_intel/lib/python3.9/site-packages/openvino/tools/accuracy_checker/preprocessor/launcher_preprocessing/ie_preprocessor.py:21: FutureWarning: OpenVINO Inference Engine Python API is deprecated and will be removed in 2024.0 release.For instructions on transitioning to the new API, please refer to https://docs.openvino.ai/latest/openvino_2_0_transition_guide.html
+  from openvino.inference_engine import ResizeAlgorithm, PreProcessInfo, ColorFormat, MeanVariant  # pylint: disable=import-outside-toplevel,package-absolute-imports
+
+[ WARNING ] /root/miniconda3/envs/historical_assets_intel/lib/python3.9/site-packages/openvino/tools/accuracy_checker/launcher/dlsdk_launcher.py:60: FutureWarning: OpenVINO nGraph Python API is deprecated and will be removed in 2024.0 release.For instructions on transitioning to the new API, please refer to https://docs.openvino.ai/latest/openvino_2_0_transition_guide.html
+  import ngraph as ng
+
+Post-training Optimization Tool is deprecated and will be removed in the future. Please use Neural Network Compression Framework instead: https://github.com/openvinotoolkit/nncf
+Nevergrad package could not be imported. If you are planning to use any hyperparameter optimization algo, consider installing it using pip. This implies advanced usage of the tool. Note that nevergrad is compatible only with Python 3.7+
+Post-training Optimization Tool is deprecated and will be removed in the future. Please use Neural Network Compression Framework instead: https://github.com/openvinotoolkit/nncf
+INFO:openvino.tools.pot.app.run:Output log dir: ./results
+INFO:openvino.tools.pot.app.run:Creating pipeline:
+ Algorithm: DefaultQuantization
+ Parameters:
+        preset                     : mixed
+        stat_subset_size           : 300
+        target_device              : ANY
+        model_type                 : None
+        dump_intermediate_model    : False
+        inplace_statistics         : True
+        exec_log_dir               : ./results
+ ===========================================================================
+INFO:openvino.tools.pot.data_loaders.image_loader:Layout value is set [N,C,H,W]
+INFO:openvino.tools.pot.pipeline.pipeline:Inference Engine version:                2023.1.0-12185-9e6b00e51cd-releases/2023/1
+INFO:openvino.tools.pot.pipeline.pipeline:Model Optimizer version:                 2023.1.0-12185-9e6b00e51cd-releases/2023/1
+INFO:openvino.tools.pot.pipeline.pipeline:Post-Training Optimization Tool version: 2023.1.0-12185-9e6b00e51cd-releases/2023/1
+INFO:openvino.tools.pot.statistics.collector:Start computing statistics for algorithms : DefaultQuantization
+INFO:openvino.tools.pot.statistics.collector:Computing statistics finished
+INFO:openvino.tools.pot.pipeline.pipeline:Start algorithm: DefaultQuantization
+INFO:openvino.tools.pot.algorithms.quantization.default.algorithm:Start computing statistics for algorithm : ActivationChannelAlignment
+INFO:openvino.tools.pot.algorithms.quantization.default.algorithm:Computing statistics finished
+INFO:openvino.tools.pot.algorithms.quantization.default.algorithm:Start computing statistics for algorithms : MinMaxQuantization,FastBiasCorrection
+INFO:openvino.tools.pot.algorithms.quantization.default.algorithm:Computing statistics finished
+INFO:openvino.tools.pot.pipeline.pipeline:Finished: DefaultQuantization
+ ===========================================================================
+```
+
+#### Output From Inference Performance of Quantized INT8 Model
+
+```
+[Step 1/11] Parsing and validating input arguments
+[ INFO ] Parsing input parameters
+[Step 2/11] Loading OpenVINO Runtime
+[ INFO ] OpenVINO:
+[ INFO ] Build ................................. 2023.1.0-12185-9e6b00e51cd-releases/2023/1
+[ INFO ]
+[ INFO ] Device info:
+[ INFO ] CPU
+[ INFO ] Build ................................. 2023.1.0-12185-9e6b00e51cd-releases/2023/1
+[ INFO ]
+[ INFO ]
+[Step 3/11] Setting device configuration
+[ WARNING ] Performance hint was not explicitly specified in command line. Device(CPU) performance hint will be set to PerformanceMode.THROUGHPUT.
+```
+...
+```
+[Step 9/11] Creating infer requests and preparing input tensors
+[ WARNING ] No input files were given for input 'input.1'!. This input will be filled with random values!
+[ INFO ] Fill input 'input.1' with random values
+[Step 10/11] Measuring performance (Start inference asynchronously, 56 inference requests, limits: 60000 ms duration)
+[ INFO ] Benchmarking in inference only mode (inputs filling are not included in measurement loop).
+[ INFO ] First inference took 5.68 ms
+[Step 11/11] Dumping statistics report
+[ INFO ] Execution Devices:['CPU']
+[ INFO ] Count:            653688 iterations
+[ INFO ] Duration:         60008.15 ms
+[ INFO ] Latency:
+[ INFO ]    Median:        5.03 ms
+[ INFO ]    Average:       5.05 ms
+[ INFO ]    Min:           4.56 ms
+[ INFO ]    Max:           15.89 ms
+[ INFO ] Throughput:   10893.32 FPS
+```
+
+## Summary and Next Steps
+
+This reference kit presents an OCR solution specialized in the text recognition task through the implementation of a deep learning CRNN model. Furthermore, the CRNN text recogniton model leverages the optimizations given by Intel® Extension for PyTorch\*, Intel® Neural Compressor and Intel® Distribution of OpenVINO<sup>TM</sup> Toolkit to accelerate its training, inference and end-to-end processing capabilities while maintaining the accuracy. Based on this setup, this reference kit emerges as an efficient tool to build and deploy an OCR system that is is able to match the resources demands of different production environments, including edge devices.
+
+As next steps, the machine learning practitioners could adapt this OCR solution to train a different CRNN model with a custom dataset using Intel® Extension for PyTorch\*, quantize the trained model with either Intel® Neural Compressor or Intel® Distribution of OpenVINO<sup>TM</sup> Toolkit to assess its inference gains, and finally, incorporate the trained or quantized model into an end-to-end pipeline to extract text from complex input document images.
+
+## Learn More
+For more information about Predictive Asset Maintenance or to read about other relevant workflow examples, see these guides and software resources:
+
+- [Intel® AI Analytics Toolkit (AI Kit)](https://www.intel.com/content/www/us/en/developer/tools/oneapi/ai-analytics-toolkit.html)
+- [Intel® Extension for PyTorch\*](https://www.intel.com/content/www/us/en/developer/tools/oneapi/optimization-for-pytorch.html#gs.5vjhbw)
+- [Intel® Neural Compressor](https://www.intel.com/content/www/us/en/developer/tools/oneapi/neural-compressor.html#gs.5vjr1p)
+- [Intel® Distribution of OpenVINO<sup>TM</sup> Toolkit](https://www.intel.com/content/www/us/en/download/753640/intel-distribution-of-openvino-toolkit.html)
+
+## Troubleshooting
+1. Could not build wheels for pycocotools
+
+    **Issue:** 
+      ```
+      ERROR: Could not build wheels for pycocotools, which is required to install pyproject.toml-based projects
+      ```
+
+    **Solution:**
+
+    Install gcc.  For Ubuntu, this will be: 
+
+      ```bash
+      apt install gcc
+      ```
+
+2. libGL.so.1/libgthread-2.0.so.0: cannot open shared object file: No such file or directory
+   
+    **Issue:**
+      ```
+      ImportError: libGL.so.1: cannot open shared object file: No such file or directory
+      or
+      libgthread-2.0.so.0: cannot open shared object file: No such file or directory
+      ```
+
+    **Solution:**
+
+      Install the libgl11-mesa-glx and libglib2.0-0 libraries. For Ubuntu this will be:
+
+      ```bash
+     apt install libgl1-mesa-glx
+     apt install libglib2.0-0
+      ```
+
+## Support
+If you have questions or issues about this workflow, want help with troubleshooting, want to report a bug or submit enhancement requests, please submit a GitHub issue.
 
 ## Appendix
 
-### **Experiment setup**
+### References
 
-| Platform                          | Ubuntu 20.04
-| :---                              | :---
-| Hardware                          | Azure Standard_D8_V5
-| Software                          | Intel® Distribution for Python 3.9, Intel® Extension for PyTorch 1.12.100, Intel® Neural Compressor 1.14.0, Intel® Distribution of OpenVINO™ Toolkit 2022.1.0.
-| What you will learn               | Advantage of using components in Intel® Extension for PyTorch over the stock versions.
+<a id="hegghammer_2021">[1]</a> Hegghammer, T. (2021). OCR with Tesseract, Amazon Textract, and Google Document AI: a benchmarking experiment. Journal of Computational Social Science. https://doi.org/10.1007/s42001-021-00149-1
+
+‌<a id="li_2022">[2]</a> Li, M., Lv, T., Cui, L., Lu, Y., Florencio, D., Zhang, C., Li, Z., & Wei, F. (n.d.). TrOCR: Transformer-based Optical Character Recognition with Pre-trained Models. https://arxiv.org/pdf/2109.10282.pdf
+
+‌<a id="memon_2020">[3]</a> Memon, J., Sami, M., Khan, R. A., & Uddin, M. (2020). Handwritten Optical Character Recognition (OCR): A Comprehensive Systematic Literature Review (SLR). IEEE Access, 8, 142642–142668. https://doi.org/10.1109/access.2020.3012542
+
+‌<a id="faustomorales_2019">[4]</a> faustomorales. (2019, December 8). faustomorales/keras-ocr. GitHub. https://github.com/faustomorales/keras-ocr
+
+‌<a id="thompson_2016">[5]</a> Thompson, P., Batista-Navarro, R. T., Kontonatsios, G., Carter, J., Toon, E., McNaught, J., Timmermann, C., Worboys, M., & Ananiadou, S. (2016). Text Mining the History of Medicine. PLOS ONE, 11(1), e0144717. https://doi.org/10.1371/journal.pone.0144717
+
+‌<a id="shatri_2020">[6]</a> Shatri, E., & Fazekas, G. (n.d.). OPTICAL MUSIC RECOGNITION: STATE OF THE ART AND MAJOR CHALLENGES. https://arxiv.org/pdf/2006.07885.pdf
+
+‌<a id="oucheikh_2022">[7]</a> Oucheikh, R., Pettersson, T., & Löfström, T. (2022). Product verification using OCR classification and Mondrian conformal prediction. Expert Systems with Applications, 188, 115942. https://doi.org/10.1016/j.eswa.2021.115942
+
+‌‌<a id="arvindrao_2023">[8]</a> IJRASET. (n.d.). Automated Financial Documents Processing System Using Machine Learning. Www.ijraset.com. Retrieved September 19, 2023, from https://www.ijraset.com/research-paper/automated-financial-documents-processing-system
+
+‌<a id="chollet_2017">[9]</a> Chollet, F. (2017). Deep learning with python. Manning Publications.
+
+‌<a id="choi_2016">[10]</a> Choi, K., Fazekas, G., Sandler, M., & Cho, K. (n.d.). CONVOLUTIONAL RECURRENT NEURAL NETWORKS FOR MUSIC CLASSIFICATION. https://arxiv.org/pdf/1609.04243.pdf?source=post_page---------------------------
+
+‌<a id="shi_2017">[11]</a> Shi, B., Bai, X., & Yao, C. (2017). An End-to-End Trainable Neural Network for Image-Based Sequence Recognition and Its Application to Scene Text Recognition. IEEE Transactions on Pattern Analysis and Machine Intelligence, 39(11), 2298–2304. https://doi.org/10.1109/tpami.2016.2646371
+
+‌<a id="openvino">[12]</a> Benchmark Python Tool — OpenVINOTM documentation. (n.d.). Docs.openvino.ai. Retrieved September 28, 2023, from https://docs.openvino.ai/2023.1/openvino_inference_engine_tools_benchmark_tool_README.html
+
+‌
 

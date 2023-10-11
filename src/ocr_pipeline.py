@@ -1,4 +1,4 @@
-# Copyright (C) 2022 Intel Corporation
+# Copyright (C) 2023 Intel Corporation
 # SPDX-License-Identifier: BSD-3-Clause
 
 # pylint: disable=missing-module-docstring
@@ -31,13 +31,6 @@ if __name__ == '__main__':
                         default="",
                         help='Test Images Path')
 
-    parser.add_argument('-i',
-                        '--intel',
-                        type=int,
-                        required=False,
-                        default=0,
-                        help='use 1 for enabling intel pytorch optimizations, default is 0')
-
     parser.add_argument('-q',
                         '--inc',
                         type=int,
@@ -67,7 +60,7 @@ if __name__ == '__main__':
                         help='batch size for inferencing')
                         
     FLAGS = parser.parse_args()
-    intel_opt = FLAGS.intel
+    intel_opt = 1
     inc_opt = FLAGS.inc
     crnn_model_path = FLAGS.crnn_model_path
     quantized_model_path = FLAGS.quantized_model_path
@@ -80,7 +73,7 @@ if __name__ == '__main__':
 
     image_files = glob(test_images_path+'/*.*')
     print(image_files)
-    result_dir = './test_result'
+    result_dir = './output/test_result'
     if os.path.exists(result_dir):
         shutil.rmtree(result_dir)
     os.mkdir(result_dir)

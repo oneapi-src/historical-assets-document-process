@@ -1,4 +1,4 @@
-# Copyright (C) 2022 Intel Corporation
+# Copyright (C) 2023 Intel Corporation
 # SPDX-License-Identifier: BSD-3-Clause
 
 # pylint: disable=missing-docstring
@@ -21,7 +21,7 @@ def val_model(infofile, model, gpu, log_file='0625.log'):
     '''This module validates the trained model
     input params:model,test data file
     output params:accuracy'''
-    h = open('logs/{}'.format(log_file), 'w', encoding="utf-8")
+    h = open('output/logs/{}'.format(log_file), 'w', encoding="utf-8")
     with open(infofile, encoding="utf-8") as f: # Read the file with test images list
         content = f.readlines()
         num_all = 0

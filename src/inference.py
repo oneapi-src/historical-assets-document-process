@@ -1,4 +1,4 @@
-# Copyright (C) 2022 Intel Corporation
+# Copyright (C) 2023 Intel Corporation
 # SPDX-License-Identifier: BSD-3-Clause
 
 # pylint: disable=missing-module-docstring
@@ -143,25 +143,17 @@ def load_model(model_path, intel_flag):
     crnn_model.load_state_dict(torch.load(model_path, map_location="cpu"))
     crnn_model.eval()
 
-    if intel_flag:
-        import intel_extension_for_pytorch as ipex  # pylint: disable=E0401
-        crnn_model = ipex.optimize(crnn_model)
-        print("Intel Pytorch Optimizations has been Enabled!")
-    else:
-        device = torch.device('cpu')
+    # Enabling IPEX
+    import intel_extension_for_pytorch as ipex  # pylint: disable=E0401
+    crnn_model = ipex.optimize(crnn_model)
+    print("Intel Pytorch Optimizations has been Enabled!")
+
     return crnn_model
 
 
 if __name__ == "__main__":
     # Parameters
     parser = argparse.ArgumentParser()
-    parser.add_argument('-i',
-                        '--intel',
-                        type=int,
-                        required=False,
-                        default=0,
-                        help='use 1 for enabling intel pytorch optimizations, default is 0')
-
     parser.add_argument('-m',
                         '--model_path',
                         type=str,
@@ -177,7 +169,7 @@ if __name__ == "__main__":
                         help='batch size for inferencing')
                         
     FLAGS = parser.parse_args()
-    intel_flag = FLAGS.intel
+    intel_flag = 1
     model_path = FLAGS.model_path
     batchsize = FLAGS.batchsize
 
