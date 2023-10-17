@@ -2,12 +2,12 @@
 
 ## Introduction
 
-Build an optimized Optical Character Recognition (OCR) solution to automate text detection and extraction from input document images using Intel® Extension for PyTorch\*, Intel® Neural Compressor and Intel® Distribution of OpenVINO<sup>TM</sup> Toolkit. Check out the [Developer Catalog](https://developer.intel.com/aireferenceimplementations) for information about different use cases.
+Build an optimized Optical Character Recognition (OCR) solution to automate text detection and extraction from input document images using Intel® Extension for PyTorch\*, Intel® Neural Compressor and the Intel® Distribution of OpenVINO<sup>TM</sup> toolkit. Check out the [Developer Catalog](https://developer.intel.com/aireferenceimplementations) for information about different use cases.
 
 ## Solution Technical Overview
 Historically, business and organizations have faced the need to manage a huge amount of printed documents for multiple purposes, like obtain customer’s credit history, collect medical history of patients or access to legal documents for judicial cases. Manually process this enormous flow of paper-based documents represents a big challenge for any industry, since this manual procedure takes a lot of time to carry out, is prone to human error/bias, and requires a considerable physical space to store hundreds or thousands of paper files.
 
-The issue related to using storage facilities to preserve the documents can be address by a paperless and digitized solution that offers a way to easily store the printed documents in a suitable database. However, having a document scanned into an image of text is different than a machine-encoded text, which allows, for example, to efficiently use a text editor to modify some old file or retrieve a document by searching for a specific entity in a database, like client’s name. In this context, a large set of scanned files still requires domain specialization to manually extract useful information, which involves time, increases the cost of the process, and cannot eradicate the potential intentional or unintentional errors due to human intervention.
+The issue related to using storage facilities to preserve the documents can be addressed by a paperless and digitized solution that offers a way to easily store the printed documents in a suitable database. However, having a document scanned into an image of text is different than a machine-encoded text, which allows, for example, to efficiently use a text editor to modify some old file or retrieve a document by searching for a specific entity in a database, like client’s name. In this context, a large set of scanned files still requires domain specialization to manually extract useful information, which involves time, increases the cost of the process, and cannot eradicate the potential intentional or unintentional errors due to human intervention.
 
 Optical Character Recognition (OCR) systems emerge as an automated solution that generates machine-encoded text from input document images, making more efficient the processing of an increasingly number of digital files, in addition to minimizing human intervention [[1]](#hegghammer_2021)[[2]](#li_2022).
 
@@ -41,7 +41,7 @@ Besides offering an OCR system based on state-of-the-art deep learning technique
      * Optimizes inference of deep learning models by applying model retraining or fine-tuning, like post-training quantization. 
      * Supports heterogeneous execution across Intel hardware, using a common API for the Intel CPU, Intel® Integrated Graphics, Intel® Discrete Graphics, and other commonly used accelerators. 
 
-In particular, Intel® Neural Compressor functionalities are applied to compress the CRNN text extraction model via a post-training quantization procedure, which improves the performance of the model in inference time without compromising its accuracy and supports an efficient deployment of the quantized model in a wide range of Intel® CPUs and GPUs. In the same way, Intel® Distribution of OpenVINO<sup>TM</sup> Toolkit reduces model size by using quantization techniques, but also features an optimized deployment across Intel platforms, including edge devices and cloud environments. A detailed description of how this reference kit implements Intel® optimization packages can be found in this [section](#how-it-works).
+In particular, Intel® Neural Compressor functionalities are applied to compress the CRNN text extraction model via a post-training quantization procedure, which improves the performance of the model in inference time without compromising its accuracy and supports an efficient deployment of the quantized model in a wide range of Intel® CPUs and GPUs. In the same way, the Intel® Distribution of OpenVINO<sup>TM</sup> toolkit reduces model size by using quantization techniques, but also features an optimized deployment across Intel platforms, including edge devices and cloud environments. A detailed description of how this reference kit implements Intel® optimization packages can be found in this [section](#how-it-works).
 
 With the aim to provide an accessible approach to conduct frequent re-training to analyze the performance of multiple CRNN models for the text extraction component, this OCR solution enables hyperparameter tuning. Combined with the use of cutting-edge deep learning models and Intel® optimization packages, hyperparameter tuning makes possible to leverage this reference kit as a useful resource for the machine learning practitioner looking to easily build and deploy a custom OCR system optimized to accurately extract text within document images.
 
@@ -153,17 +153,17 @@ Once the CRNN models have been trained using Intel® Extension for PyTorch\*, th
 Just like any of the trained CRNN models with Intel® Extension for PyTorch\*, the CRNN model quantized with Intel® Neural Compressor can be used to carry out end-to-end predictions.
 
 ### Intel® Distribution of OpenVINO™ Toolkit
-Similar to Intel® Neural Compressor, Intel® Distribution of OpenVINO™ Toolkit allows to reduce the model size with post-training quantization, which improves inference performance. By using Intel® Distribution of OpenVINO™ Toolkit post-training quantization, the FP32 CRNN model is converted to INT8. Moreover, Intel® Distribution of OpenVINO™ Toolkit optimizes the CRNN model for deployment in resource-constrained environments, like edge devices.
+Similar to Intel® Neural Compressor, the Intel® Distribution of OpenVINO™ toolkit allows to reduce the model size with post-training quantization, which improves inference performance. By using the Intel® Distribution of OpenVINO™ toolkit post-training quantization, the FP32 CRNN model is converted to INT8. Moreover, the Intel® Distribution of OpenVINO™ toolkit optimizes the CRNN model for deployment in resource-constrained environments, like edge devices.
 
-In order to quantize the FP32 CRNN model using Intel® Distribution of OpenVINO™ Toolkit, it is necessary to first convert the original FP32 CRNN model into ONNX (Open Neural Network Exchange) model representation. After the model is converted to ONNX, it must be converted into an Intermediate Representation (IR) format, which is an internal Intel® Distribution of OpenVINO™ Toolkit model representation. Once the CRNN model is in IR format, Intel® Distribution of OpenVINO™ Toolkit directly quantized the IR model via the Post-training Optimization (POT) tool and transforms it into an INT8 model. This conversion stages are illustrated in the following diagram.
+In order to quantize the FP32 CRNN model using the Intel® Distribution of OpenVINO™ toolkit, it is necessary to first convert the original FP32 CRNN model into ONNX (Open Neural Network Exchange) model representation. After the model is converted to ONNX, it must be converted into an Intermediate Representation (IR) format, which is an internal Intel® Distribution of OpenVINO™ toolkit model representation. Once the CRNN model is in IR format, the Intel® Distribution of OpenVINO™ toolkit directly quantizes the IR model via the Post-training Optimization (POT) tool and transforms it into an INT8 model. This conversion stages are illustrated in the following diagram.
 
 ![ocr-flow](assets/conversion_stages.png)
 
-Another benefit from using Intel® Distribution of OpenVINO™ Toolkit is that it enables the use of the benchmark Python\* tool, which is a feature that estimates the inference performance of the corresponding deep learning model on supported devices [[12]](#openvino). The estimated inference performance is calculated in terms of latency and throughput. For this use case, the benchmark Python\* tool is applied on the ONNX, IR and quantized INT8 models.
+Another benefit from using the Intel® Distribution of OpenVINO™ toolkit is that it enables the use of the benchmark Python\* tool, which is a feature that estimates the inference performance of the corresponding deep learning model on supported devices [[12]](#openvino). The estimated inference performance is calculated in terms of latency and throughput. For this use case, the benchmark Python\* tool is applied on the ONNX, IR and quantized INT8 models.
 
-As it can be seen, this reference kit offers the alternative to optimize the inference performance of the CRNN model not just with Intel® Neural Compressor, but also with Intel® Distribution of OpenVINO™ Toolkit.
+As it can be seen, this reference kit offers the alternative to optimize the inference performance of the CRNN model not just with Intel® Neural Compressor, but also with the Intel® Distribution of OpenVINO™ toolkit.
 
-Please refer to the [Get Started](#get-started) section to see the instructions to implement the training, inference and end-to-end modalities using Intel® Extension for PyTorch\*, Intel® Neural Compressor and Intel® Distribution of OpenVINO™ Toolkit
+Please refer to the [Get Started](#get-started) section to see the instructions to implement the training, inference and end-to-end modalities using Intel® Extension for PyTorch\*, Intel® Neural Compressor and the Intel® Distribution of OpenVINO™ toolkit.
 
 ## Get Started
 Start by **defining an environment variable** that will store the workspace path, this can be an existing directory or one to be created in further steps. This ENVVAR will be used for all the commands executed using absolute paths.
@@ -315,7 +315,7 @@ cd $WORKSPACE
 ```
 
 #### Run Workflow
-The following subsections provide the commands to make an optimized execution of this OCR workflow based on Intel® Extension for PyTorch\*, Intel® Neural Compressor and Intel® Distribution of OpenVINO<sup>TM</sup> Toolkit. As an illustrative guideline to understand how the Intel® specialized packages are used to optimize the performance of the text recognition CRNN model, please check the [How it Works](#how-it-works) section.
+The following subsections provide the commands to make an optimized execution of this OCR workflow based on Intel® Extension for PyTorch\*, Intel® Neural Compressor and the Intel® Distribution of OpenVINO<sup>TM</sup> toolkit. As an illustrative guideline to understand how the Intel® specialized packages are used to optimize the performance of the text recognition CRNN model, please check the [How it Works](#how-it-works) section.
 
 ---
 
@@ -509,8 +509,8 @@ In this example, the FP32 CRNN model is the one fitted through hyperparameter tu
 
 ---
 
-#### Optimizations with Intel® Distribution of OpenVINO<sup>TM</sup> Toolkit
-Another option to quantize any of the trained FP32 CRNN models with Intel® Extension for PyTorch\* is by using Intel® Distribution of OpenVINO<sup>TM</sup> Toolkit, which is specialized in optimizing the inference performance in constrained environments, like edge devices. However, in order to quantize the FP32 CRNN model using Intel® Distribution of OpenVINO™ Toolkit, it is required to first convert the FP32 CRNN model into an ONXX model representation, then, the ONXX model is converted into an Intermediate Representation (IR) format, and finally, the IR model can be quantized. For further details, check this [subsection](#intel®-distribution-of-openvino™-toolkit).
+#### Optimizations with the Intel® Distribution of OpenVINO<sup>TM</sup> Toolkit
+Another option to quantize any of the trained FP32 CRNN models with Intel® Extension for PyTorch\* is by using the Intel® Distribution of OpenVINO<sup>TM</sup> toolkit, which is specialized in optimizing the inference performance in constrained environments, like edge devices. However, in order to quantize the FP32 CRNN model using the Intel® Distribution of OpenVINO™ toolkit, it is required to first convert the FP32 CRNN model into an ONXX model representation, then, the ONXX model is converted into an Intermediate Representation (IR) format, and finally, the IR model can be quantized. For further details, check this [subsection](#intel®-distribution-of-openvino™-toolkit).
 
 #### Model Conversion to ONNX Format
 Below script is used to convert FP32 model to ONNX model representation. The converted ONNX model file will be saved in `$WORKSPACE/src/openvino`.
@@ -552,8 +552,8 @@ Example:
 mo --input_model $WORKSPACE/src/openvino/test_model.onnx --output_dir $WORKSPACE/src/openvino
 ```
 
-#### Model Inference Performance with OpenVINO<sup>TM</sup> Benchmark Python\* Tool
-By using the benchmark Python\* tool from Intel® Distribution of OpenVINO™ Toolkit, it is possible to estimate the inference performance of the ONNX, IR and quantized INT8 models.
+#### Model Inference Performance with the OpenVINO<sup>TM</sup> Benchmark Python\* Tool
+By using the benchmark Python\* tool from the Intel® Distribution of OpenVINO™ toolkit, it is possible to estimate the inference performance of the ONNX, IR and quantized INT8 models.
 
 #### Inference Performance of ONNX Model
 Below command is used to run the benchmark tool for the ONNX model.
@@ -589,7 +589,7 @@ Example:
 benchmark_app -m $WORKSPACE/src/openvino/test_model.xml
 ```
 
-#### Model Conversion Using OpenVINO<sup>TM</sup> Post-training Optimization Tool (POT)
+#### Model Conversion Using the OpenVINO<sup>TM</sup> Post-training Optimization Tool (POT)
 A configuration file is needed to setup the various parameters and apply quantization via the Post-training Optimization Tool (POT), which converts the IR FP32 model into an INT8 model. The same configuration file has already been provided in the repo at following path:
 
 ```
@@ -996,7 +996,7 @@ Prediction time for image:  0.02817275524139404
 Total pipeline prediction time for all the images:  0.0587044358253479
 ```
 
-#### Output From Model Conversion to ONNX Format Using Intel® Distribution of OpenVINO<sup>TM</sup>
+#### Output From Model Conversion to ONNX Format Using the Intel® Distribution of OpenVINO<sup>TM</sup> Toolkit
 
 ```
 /historical-assets-main-test/src/crnn.py:87: TracerWarning: Converting a tensor to a Python boolean might cause the trace to be incorrect. We can't record the data flow of Python values, so this value will be treated as a constant in the future. This means that the trace might not generalize to other inputs!
@@ -1172,9 +1172,9 @@ INFO:openvino.tools.pot.pipeline.pipeline:Finished: DefaultQuantization
 
 ## Summary and Next Steps
 
-This reference kit presents an OCR solution specialized in the text recognition task through the implementation of a deep learning CRNN model. Furthermore, the CRNN text recogniton model leverages the optimizations given by Intel® Extension for PyTorch\*, Intel® Neural Compressor and Intel® Distribution of OpenVINO<sup>TM</sup> Toolkit to accelerate its training, inference and end-to-end processing capabilities while maintaining the accuracy. Based on this setup, this reference kit emerges as an efficient tool to build and deploy an OCR system that is is able to match the resources demands of different production environments, including edge devices.
+This reference kit presents an OCR solution specialized in the text recognition task through the implementation of a deep learning CRNN model. Furthermore, the CRNN text recogniton model leverages the optimizations given by Intel® Extension for PyTorch\*, Intel® Neural Compressor and the Intel® Distribution of OpenVINO<sup>TM</sup> toolkit to accelerate its training, inference and end-to-end processing capabilities while maintaining the accuracy. Based on this setup, this reference kit emerges as an efficient tool to build and deploy an OCR system that is is able to match the resources demands of different production environments, including edge devices.
 
-As next steps, the machine learning practitioners could adapt this OCR solution to train a different CRNN model with a custom dataset using Intel® Extension for PyTorch\*, quantize the trained model with either Intel® Neural Compressor or Intel® Distribution of OpenVINO<sup>TM</sup> Toolkit to assess its inference gains, and finally, incorporate the trained or quantized model into an end-to-end pipeline to extract text from complex input document images.
+As next steps, the machine learning practitioners could adapt this OCR solution to train a different CRNN model with a custom dataset using Intel® Extension for PyTorch\*, quantize the trained model with either Intel® Neural Compressor or the Intel® Distribution of OpenVINO<sup>TM</sup> toolkit to assess its inference gains, and finally, incorporate the trained or quantized model into an end-to-end pipeline to extract text from complex input document images.
 
 ## Learn More
 For more information about Predictive Asset Maintenance or to read about other relevant workflow examples, see these guides and software resources:
