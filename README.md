@@ -1223,6 +1223,11 @@ If you have questions or issues about this workflow, want help with troubleshoot
 
 ## Appendix
 
+### Disclaimer
+
+To the extent that any public or non-Intel datasets or models are referenced by or accessed using tools or code on this site those datasets or models are provided by the third party indicated as the content source. Intel does not create the content and does not warrant its accuracy or quality. By accessing the public content, or using materials trained on or with such content, you agree to the terms associated with that content and that your use complies with the applicable license.
+Intel expressly disclaims the accuracy, adequacy, or completeness of any such public content, and is not liable for any errors, omissions, or defects in the content, or for any reliance on the content. Intel is not liable for any liability or damages relating to your use of public content.
+
 ### References
 
 <a id="hegghammer_2021">[1]</a> Hegghammer, T. (2021). OCR with Tesseract, Amazon Textract, and Google Document AI: a benchmarking experiment. Journal of Computational Social Science. https://doi.org/10.1007/s42001-021-00149-1
