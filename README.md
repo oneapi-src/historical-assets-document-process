@@ -1,4 +1,4 @@
-# PyTorch Historical Assets Document Processing(OCR)
+# Historical Assets Document Process
 
 ## Introduction
 
