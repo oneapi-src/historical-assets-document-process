@@ -3,15 +3,17 @@ channels:
   - intel
   - conda-forge
 dependencies:
-  - intel::intelpython3_core=2023.2.0=py39_0
+  - intel::intelpython3_core=2024.0.0
+  - intel::python=3.9
   - cpuonly=1.0
-  - intel:pip
+  - intel-extension-for-pytorch==2.0.100
+  - neural-compressor==2.3.1
+  - pillow==9.5
+  - intel::pip
   - pip:
     - torch==2.0.1
-    - easyocr==1.6.2
-    - intel-extension-for-pytorch==2.0.100
-    - neural-compressor==2.2
+    - easyocr==1.7.1
     - trdg==1.8.0
-    - opencv-python==4.5.5.64
-    - openvino-dev[onnx]==2023.1.0
-    - pillow==9.5
+    - opencv-python==4.8.1.78
+    - openvino-dev[onnx]==2023.2.0
+

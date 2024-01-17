@@ -1,0 +1,11 @@
+name: historical_assets_jake
+channels:
+  - intel
+  - conda-forge
+dependencies:
+  - intel::python==3.9.16
+  - pillow==9.5
+  - intel::pip
+  - pip:
+    - easyocr==1.7.1
+    - trdg==1.8.0
