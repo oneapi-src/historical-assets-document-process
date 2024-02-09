@@ -69,7 +69,7 @@ if __name__ == '__main__':
 
     if inc_opt:
         intel_opt = True
-        assert quantized_model_path is not None
+        if (quantized_model_path is None): raise AssertionError('There is not a quantized model') 
 
     image_files = glob(test_images_path+'/*.*')
     print(image_files)
