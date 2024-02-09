@@ -3,7 +3,7 @@ version: 1.0
 
 model:
     name: CRNN
-    framework: pytorch_fx
+    framework: pytorch_ipex
 evaluation:                                          # optional. required if user doesn't provide eval_func in neural_compressor.Quantization.
   accuracy:                                          # optional. required if user doesn't provide eval_func in neural_compressor.Quantization.
     metric:
