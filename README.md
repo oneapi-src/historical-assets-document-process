@@ -13,7 +13,7 @@ Optical Character Recognition (OCR) systems emerge as an automated solution that
 
 In an OCR pipeline, an input document image flows into a text detection component and next, it is processed by a text recognition component. In the text detection stage, the objective is to localize all text regions within the input document images, where each of these text zones are known as region of interest (ROI). Once the ROIs are detected, they are cropped from the input images and passed to the text recognition component, which is in charge of identifying the text contained in the ROIs and transcribe such text into machine-encoded text. This process is illustrated in the following diagram:
 
-![ocr-flow](assets/ocr_flow_diagram.png)
+![ocr-flow](assets/ocr_flow_diagram_op.png)
 
 Nowadays, AI (Artificial Intelligence) methods in the form of cutting-edge deep learning algorithms are commonly incorporated into OCR solutions to increase their efficiency in the processing of scanned files and their accuracy in the text recognition task [[3]](#memon_2020). Deep learning detection models like YOLO variations and CRAFT are frequently used in the text detection module to localize the ROIs, whereas models like Convolutional Recurrent Neural Networks (CRNN) and Transformers are implemented as part of the text recognition stage [[2]](#li_2022)[[4]](#faustomorales_2019).
 
@@ -51,7 +51,7 @@ Furthermore, avoiding the manual retrieval of some specific information from a m
   * Extracting text information from products to reduce shrinkage loss in grocery stores.
   * Automate the processing of financial documents to combat fraud, increase productivity and improve customer service.  
 
-For more details, visit [Intel® Extension for PyTorch\*](https://www.intel.com/content/www/us/en/developer/tools/oneapi/optimization-for-pytorch.html#gs.5vjhbw), [Intel® Neural Compressor](https://www.intel.com/content/www/us/en/developer/tools/oneapi/neural-compressor.html#gs.5vjr1p), [Intel® Distribution of OpenVINO<sup>TM</sup> Toolkit](https://www.intel.com/content/www/us/en/download/753640/intel-distribution-of-openvino-toolkit.html), the [PyTorch\* Historical Assets Document Processing (OCR)]() GitHub repository, and the [EasyOCR](https://github.com/JaidedAI/EasyOCR) GitHub repository.
+For more details, visit [Intel® Extension for PyTorch\*](https://www.intel.com/content/www/us/en/developer/tools/oneapi/optimization-for-pytorch.html#gs.5vjhbw), [Intel® Neural Compressor](https://www.intel.com/content/www/us/en/developer/tools/oneapi/neural-compressor.html#gs.5vjr1p), [Intel® Distribution of OpenVINO<sup>TM</sup> Toolkit](https://www.intel.com/content/www/us/en/download/753640/intel-distribution-of-openvino-toolkit.html), the [Historical Assets Document Process]() GitHub repository, and the [EasyOCR](https://github.com/JaidedAI/EasyOCR) GitHub repository.
 
 ## Solution Technical Details
 In this section, the interested reader can find a more in deep explanation about the text recognition component from the proposed OCR solution. A description of the dataset used to perform training and inference is also presented.
@@ -71,7 +71,7 @@ About the LSTM model used by the CRNN in this project, it works under a bidirect
 
 Regarding the workflow process of the CRNN, it receives a cropped ROI image from EasyOCR as an input, and the convolutional component proceeds to extract a sequence of feature maps, which are then mapped into a sequence of feature vectors. Next, the bidirectional LSTM makes a prediction for each feature vector. Finally, a post-processing step is carried out to convert the LSTM predictions into a label sequence. The diagram below provides an illustrative reference of this process.
 
-![ocr-flow](assets/crnn_flow_diagram.png)
+![ocr-flow](assets/crnn_flow_diagram_op.png)
 
 In terms of model architecture, the CRNN is composed by seven convolutional layers, each of them followed by a max pooling layer. As for the RNN, it is constituted by two bidirectional LSTM layers, each of them followed by a linear layer. The next table summarizes the structure of the CRNN model implemented in this reference kit. "in_maps" stands for "input feature maps", "out_maps" for "output feature maps", "k" for "kernel size", "s" for "stride", "p" for "padding", "in_features" is the size of each input instance and "out_features" is the size of each output instance.
 
@@ -119,7 +119,7 @@ how the workflow is run.
 
 | Recommended Hardware                                            | Precision
 | ----------------------------------------------------------------|-
-| CPU: Intel® 2th Gen Xeon® Platinum 8280 CPU @ 2.70GHz or higher | FP32, INT8
+| CPU: Intel® 2nd Gen Xeon® Platinum 8280 CPU @ 2.70GHz or higher | FP32, INT8
 | RAM: 187 GB                                                     |
 | Recommended Free Disk Space: 20 GB or more                      |
 
@@ -128,7 +128,7 @@ Code was tested on Ubuntu\* 22.04 LTS.
 ## How it Works
 The text recognition component enables the training and inference modalities. Furthermore, this reference kit provides the option to incorporate the trained CRNN text recognition model into an end-to-end OCR system to make predictions from a complete document image. All these procedures are optimized using Intel® specialized packages. The next diagram illustrates the workflow of these processes and how the Intel® optimization features are applied in each stage. 
 
-![ocr-flow](assets/e2e_flow_diagram.png)
+![ocr-flow](assets/e2e_flow_diagram_op.png)
 
 ### Intel® Extension for PyTorch\*
 Training a CRNN model, and making inference with it, usually represent compute-intensive tasks. To address these requirements and to gain a performance boost on Intel® hardware, in this reference kit the training and inference stages of the CRNN model include the implementation of Intel® Extension for PyTorch\*.
@@ -155,9 +155,9 @@ Just like any of the trained CRNN models with Intel® Extension for PyTorch\*, t
 ### Intel® Distribution of OpenVINO™ Toolkit
 Similar to Intel® Neural Compressor, the Intel® Distribution of OpenVINO™ toolkit allows to reduce the model size with post-training quantization, which improves inference performance. By using the Intel® Distribution of OpenVINO™ toolkit post-training quantization, the FP32 CRNN model is converted to INT8. Moreover, the Intel® Distribution of OpenVINO™ toolkit optimizes the CRNN model for deployment in resource-constrained environments, like edge devices.
 
-In order to quantize the FP32 CRNN model using the Intel® Distribution of OpenVINO™ toolkit, it is necessary to first convert the original FP32 CRNN model into ONNX (Open Neural Network Exchange) model representation. After the model is converted to ONNX, it must be converted into an Intermediate Representation (IR) format, which is an internal Intel® Distribution of OpenVINO™ toolkit model representation. Once the CRNN model is in IR format, the Intel® Distribution of OpenVINO™ toolkit directly quantizes the IR model via the Post-training Optimization (POT) tool and transforms it into an INT8 model. This conversion stages are illustrated in the following diagram.
+In order to quantize the FP32 CRNN model using the Intel® Distribution of OpenVINO™ toolkit, it is necessary to first convert the original FP32 CRNN model into ONNX (Open Neural Network Exchange) model representation. After the model is converted to ONNX, it must be converted into an Intermediate Representation (IR) format, which is an internal Intel® Distribution of OpenVINO™ toolkit model representation. Once the CRNN model is in IR format, the Intel® Distribution of OpenVINO™ toolkit directly quantizes the IR model via the Post-training Optimization (POT) tool and transforms it into an INT8 model. These conversion stages are illustrated in the following diagram.
 
-![ocr-flow](assets/conversion_stages.png)
+![ocr-flow](assets/conversion_stages_op.png)
 
 Another benefit from using the Intel® Distribution of OpenVINO™ toolkit is that it enables the use of the benchmark Python\* tool, which is a feature that estimates the inference performance of the corresponding deep learning model on supported devices [[12]](#openvino). The estimated inference performance is calculated in terms of latency and throughput. For this use case, the benchmark Python\* tool is applied on the ONNX, IR and quantized INT8 models.
 
@@ -186,7 +186,7 @@ export OUTPUT_DIR=$WORKSPACE/output
 **OUTPUT_DIR:** This path will contain the multiple outputs generated by the workflow, e.g. FP32 CRNN model and INT8 CRNN model.
 
 ### Download the Workflow Repository
-Create the workspace directory for the workflow and clone the [PyTorch Historical Assets Document Processing(OCR)]() repository inside it.
+Create the workspace directory for the workflow and clone the [Historical Assets Document Process]() repository inside it.
 
 [//]: # (capture: baremetal)
 ```bash
@@ -231,10 +231,10 @@ conda config --set solver libmamba
 | Packages | Version | 
 | -------- | ------- |
 | python | 3.9 |
-| intelpython3_core | 2023.2.0 |
+| intelpython3_core | 2024.0.0 |
 | intel-extension-for-pytorch | 2.0.100 |
-| neural-compressor| 2.3 |
-| openvino-dev| 2023.1.0 |
+| neural-compressor| 2.3.1 |
+| openvino-dev| 2023.2.0 |
 
 The dependencies required to properly execute this workflow can be found in the yml file [$WORKSPACE/env/intel_env.yml](env/intel_env.yml).
 
@@ -1222,6 +1222,7 @@ For more information about Predictive Asset Maintenance or to read about other r
 If you have questions or issues about this workflow, want help with troubleshooting, want to report a bug or submit enhancement requests, please submit a GitHub issue.
 
 ## Appendix
+\*Names and brands that may be claimed as the property of others. [Trademarks](https://www.intel.com/content/www/us/en/legal/trademarks.html).
 
 ### Disclaimer
 
