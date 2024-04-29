@@ -231,9 +231,9 @@ conda config --set solver libmamba
 | Packages | Version | 
 | -------- | ------- |
 | python | 3.9 |
-| intelpython3_core | 2024.0.0 |
-| intel-extension-for-pytorch | 2.0.100 |
-| neural-compressor| 2.3.1 |
+| intelpython3_core | 2024.1.0 |
+| intel-extension-for-pytorch | 2.2.0 |
+| neural-compressor| 2.4.1 |
 | openvino-dev| 2023.2.0 |
 
 The dependencies required to properly execute this workflow can be found in the yml file [$WORKSPACE/env/intel_env.yml](env/intel_env.yml).
